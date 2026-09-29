@@ -138,3 +138,10 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 3. Expertise graph builds correctly on repos with ≥50 commits and ≥3 authors (integration test with fixtures)
 4. LLM analysis handles rate limits with retry logic (unit test with mocked API)
 5. Pilot testing with ≥4 developers (manual acceptance)
+
+## File Deletion Policy
+
+- When deleting or removing any files/directories, ALWAYS move them to the **Windows Recycle Bin** instead of permanent deletion.
+- Use Python's `send2trash` library: `pip install send2trash` → `send2trash.send2trash(path)`
+- NEVER use `rm`, `del`, or `os.remove()` for project files.
+- The user will clean the Recycle Bin manually.
