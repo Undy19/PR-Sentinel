@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     database_path: str = "pr_sentinel.db"
     github_repo: str  # "owner/repo" format
     telegram_chat_id: int
+    notification_language: str = "ru"  # "ru" or "en"
 
     class Config:
         env_file = ".env"

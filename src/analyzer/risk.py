@@ -37,6 +37,11 @@ SYSTEM_PROMPT = (
     '"reasons": ["reason1", "reason2"], "confidence": 0.0-1.0}'
 )
 
+LANGUAGE_INSTRUCTIONS: dict[str, str] = {
+    "ru": "Respond in Russian. The 'reasons' array must contain Russian text.",
+    "en": "Respond in English. The 'reasons' array must contain English text.",
+}
+
 RiskLevel = Literal["LOW", "MED", "HIGH", "CRITICAL"]
 _VALID_LEVELS = frozenset({"LOW", "MED", "HIGH", "CRITICAL"})
 
@@ -111,16 +116,23 @@ async def analyze_pr(
     pr_title: str,
     pr_body: str,
     *,
+    language: str = "ru",
     model: str = DEFAULT_MODEL,
+    api_key: str | None = None,
+    base_url: str | None = None,
     client: openai.AsyncOpenAI | None = None,
 ) -> RiskAssessment:
     """Analyze a pull request and return its risk assessment.
-
-    Args:
         diff: Unified diff of the PR.
         pr_title: PR title.
         pr_body: PR description/body.
+        language: Language for the ``reasons`` text (``"ru"`` or ``"en"``);
+            appended to the system prompt as an instruction to the model.
         model: OpenAI chat model to use (default ``"gpt-4o"``).
+        api_key: OpenAI API key; falls back to ``OPENAI_API_KEY`` env var
+            when ``None``.
+        base_url: Custom API base URL (e.g. an OpenAI-compatible proxy);
+            falls back to the OpenAI default when ``None``.
         client: Optional pre-configured ``openai.AsyncOpenAI`` client
             (dependency injection / testing); created when omitted.
 
@@ -131,11 +143,16 @@ async def analyze_pr(
         rather than raising, so callers can always notify.
     """
     if client is None:
-        client = openai.AsyncOpenAI(timeout=REQUEST_TIMEOUT)
+        client = openai.AsyncOpenAI(timeout=REQUEST_TIMEOUT, api_key=api_key, base_url=base_url)
 
     prompt = _build_user_prompt(diff, pr_title, pr_body)
+    system_prompt = (
+        SYSTEM_PROMPT
+        + " "
+        + LANGUAGE_INSTRUCTIONS.get(language, LANGUAGE_INSTRUCTIONS["en"])
+    )
     messages: list[ChatCompletionMessageParam] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
     ]
     backoff = BASE_BACKOFF

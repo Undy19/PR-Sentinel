@@ -45,6 +45,22 @@ async def test_analyze_pr_success() -> None:
     assert client.chat.completions.create.await_count == 1
 
 
+async def test_analyze_pr_language_instruction() -> None:
+    client = _mock_client()
+    client.chat.completions.create.return_value = _success_response(VALID_JSON)
+
+    await analyze_pr("diff", "PR title", "PR body", client=client, language="ru")
+    system_msg = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+    assert "Russian" in system_msg
+    assert "English" not in system_msg
+
+    client.chat.completions.create.return_value = _success_response(VALID_JSON)
+    await analyze_pr("diff", "PR title", "PR body", client=client, language="en")
+    system_msg = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+    assert "English" in system_msg
+    assert "Russian" not in system_msg
+
+
 async def test_analyze_pr_malformed_json() -> None:
     client = _mock_client()
     client.chat.completions.create.return_value = _success_response("not json")
