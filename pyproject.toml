@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pr-sentinel"
+version = "0.1.0"
+description = "Telegram bot for automated PR review filtering"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.4",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "httpx>=0.24",
+    "openai>=1.0",
+    "PyGithub>=2.0",
+    "aiosqlite>=0.19",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "black",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
