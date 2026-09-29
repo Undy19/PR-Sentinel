@@ -2,25 +2,29 @@
 
 The module exposes a ready-to-run ``app`` (``uvicorn src.webhook.server:app``)
 built by :func:`create_app`. Services are injected via :class:`WebhookDeps`
-and stored on ``app.state``; tests may replace ``app.state.deps`` with fakes
-and drive the endpoints through ``httpx.ASGITransport`` without starting a
+and stored on ``app.state``. Accepted webhooks are placed on a bounded
+``app.state.queue`` consumed by a single background worker task
+(``app.state.worker``). Tests may replace ``app.state.deps`` with fakes and
+drive the endpoints through ``httpx.ASGITransport`` without starting a
 server or constructing any real services.
 """
 
 from __future__ import annotations
+import asyncio
 
 import hashlib
 import hmac
 import json
 import logging
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from src.analyzer.risk import analyze_pr
 from src.bot.bot import PRBot
@@ -34,6 +38,8 @@ logger = logging.getLogger(__name__)
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
 HTTP_TIMEOUT = 30.0
+MAX_BODY_BYTES = 5 * 1024 * 1024
+QUEUE_MAX_SIZE = 100
 PROCESSED_ACTIONS = frozenset({"opened", "synchronize"})
 
 
@@ -47,6 +53,20 @@ class WebhookDeps:
     composer: NotificationComposer
     github: httpx.AsyncClient
     db: Database
+
+
+@dataclass(frozen=True)
+class WorkItem:
+    """A single accepted webhook, processed by the background worker."""
+
+    pr_number: int
+    title: str
+    url: str
+    body: str
+    language: str
+    model: str
+    api_key: str | None
+    base_url: str | None
 
 
 def _verify_signature(body: bytes, signature: str | None, secret: str) -> bool:
@@ -76,6 +96,44 @@ async def _fetch_pr_diff_and_files(
         if isinstance(entry, dict) and isinstance(entry.get("filename"), str)
     ]
     return diff_resp.text, files
+
+
+async def _process_work_item(deps: WebhookDeps, item: WorkItem) -> None:
+    """Run the full analysis/notification pipeline for one accepted item."""
+    diff, files = await _fetch_pr_diff_and_files(
+        deps.github, deps.settings.github_repo, item.pr_number
+    )
+    risk = await analyze_pr(
+        diff=diff,
+        pr_title=item.title,
+        pr_body=item.body,
+        language=item.language,
+        model=item.model,
+        api_key=item.api_key,
+        base_url=item.base_url,
+    )
+    reviewers = await deps.graph.recommend_reviewers(files)
+    message = deps.composer.compose(
+        pr_title=item.title, pr_url=item.url, risk=risk, reviewers=reviewers,
+        language=item.language,
+    )
+    await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
+    await deps.db.record_pr(
+        item.pr_number, item.title, item.url, risk.level, datetime.now(UTC).isoformat()
+    )
+    logger.info("notified about PR %s (risk=%s)", item.pr_number, risk.level)
+
+
+async def _queue_worker(deps: WebhookDeps, queue: asyncio.Queue[WorkItem]) -> None:
+    """Consume the work queue sequentially until the task is cancelled."""
+    while True:
+        item = await queue.get()
+        try:
+            await _process_work_item(deps, item)
+        except Exception:
+            logger.exception("failed to process PR %s", item.pr_number)
+        finally:
+            queue.task_done()
 
 
 def create_github_client(token: str) -> httpx.AsyncClient:
@@ -148,7 +206,15 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
             app.state.deps_owned = True
         else:
             app.state.deps = deps
+        app.state.queue = asyncio.Queue[WorkItem](maxsize=QUEUE_MAX_SIZE)
+        app.state.worker = asyncio.create_task(
+            _queue_worker(app.state.deps, app.state.queue)
+        )
         yield
+        worker: asyncio.Task[None] = app.state.worker
+        worker.cancel()
+        with suppress(asyncio.CancelledError):
+            await worker
         if getattr(app.state, "deps_owned", False):
             await _close_bundle(app.state.deps)
 
@@ -159,11 +225,20 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
         """Liveness probe."""
         return {"status": "healthy"}
 
-    @app.post("/webhook/github")
+    @app.post("/webhook/github", status_code=202, response_model=None)
     async def github_webhook(
         request: Request, deps: Annotated[WebhookDeps, Depends(get_deps)]
-    ) -> dict[str, str]:
+    ) -> dict[str, str] | JSONResponse:
         """Handle a GitHub ``pull_request`` webhook event."""
+        # Reject oversized bodies before reading them (SEC-03).
+        content_length = request.headers.get("Content-Length")
+        if content_length is not None:
+            try:
+                if int(content_length) > MAX_BODY_BYTES:
+                    raise HTTPException(status_code=413, detail="request body too large")
+            except ValueError:
+                pass  # unparsable Content-Length: fall through and read as before
+
         body = await request.body()
 
         if request.headers.get("X-GitHub-Event") != "pull_request":
@@ -171,9 +246,19 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
                 status_code=400, detail="expected X-GitHub-Event: pull_request"
             )
         if not _verify_signature(
-            body, request.headers.get("X-Hub-Signature-256"), deps.settings.github_token
+            body,
+            request.headers.get("X-Hub-Signature-256"),
+            deps.settings.github_webhook_secret,
         ):
             raise HTTPException(status_code=401, detail="invalid X-Hub-Signature-256")
+
+        # Replay protection: skip deliveries we have already seen (SEC-09).
+        delivery_id = request.headers.get("X-GitHub-Delivery")
+        if delivery_id:
+            if await deps.db.is_delivery_seen(delivery_id):
+                logger.info("skipping duplicate delivery %s", delivery_id)
+                return JSONResponse({"status": "duplicate"}, status_code=200)
+            await deps.db.mark_delivery_seen(delivery_id)
 
         try:
             payload: Any = json.loads(body)
@@ -202,34 +287,23 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
                 status_code=400, detail="pull_request is missing number/title/html_url"
             )
 
-        try:
-            diff, files = await _fetch_pr_diff_and_files(
-                deps.github, deps.settings.github_repo, pr_number
-            )
-        except httpx.HTTPError as exc:
-            logger.error("GitHub API request failed for PR %s: %s", pr_number, exc)
-            raise HTTPException(status_code=502, detail="failed to fetch PR from GitHub") from exc
-
-        risk = await analyze_pr(
-            diff=diff,
-            pr_title=title,
-            pr_body=pr.get("body") or "",
+        item = WorkItem(
+            pr_number=pr_number,
+            title=title,
+            url=url,
+            body=pr.get("body") or "",
             language=deps.settings.notification_language,
             model=deps.settings.openai_model,
             api_key=deps.settings.openai_api_key,
             base_url=deps.settings.openai_base_url,
         )
-        reviewers = await deps.graph.recommend_reviewers(files)
-        message = deps.composer.compose(
-            pr_title=title, pr_url=url, risk=risk, reviewers=reviewers,
-            language=deps.settings.notification_language,
-        )
-        await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
-        await deps.db.record_pr(
-            pr_number, title, url, risk.level, datetime.now(UTC).isoformat()
-        )
-        logger.info("notified about PR %s (risk=%s)", pr_number, risk.level)
-        return {"status": "ok"}
+        queue: asyncio.Queue[WorkItem] = request.app.state.queue
+        try:
+            queue.put_nowait(item)
+        except asyncio.QueueFull:
+            raise HTTPException(status_code=503, detail="busy, try again later") from None
+        logger.info("accepted PR %s for background analysis", pr_number)
+        return {"status": "accepted"}
 
     return app
 
