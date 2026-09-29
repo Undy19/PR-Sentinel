@@ -27,16 +27,56 @@ def _escape_md_v2(text: str) -> str:
 class NotificationComposer:
     """Composes the final Telegram message for a reviewed PR.
 
-    Output layout (MarkdownV2, single ``*`` for bold)::
+    Output layout (MarkdownV2); ``language`` selects ``"ru"`` (default)
+    or ``"en"`` template labels::
 
-        {emoji} *{level}* — {title}
-        → {url}
-        • reason 1
-        • reason 2
-        👥 Reviewers: @login1, @login2
+        🔀 PR: {title}
+        📊 Риск: {emoji} {level}
+        💡 {reason 1} • {reason 2}
+        👥 Ревьюеры: @login1, @login2
+        🔗 {url}
+
+    Only the template labels are localized; LLM-generated reasons are
+    passed through untouched.
     """
 
-    RISK_EMOJI: ClassVar[dict[str, str]] = {"LOW": "🟢", "MED": "🟡", "HIGH": "🟠", "CRITICAL": "🔴"}
+    RISK_EMOJI: ClassVar[dict[str, str]] = {
+        "LOW": "🟢",
+        "MED": "🟡",
+        "HIGH": "🟠",
+        "CRITICAL": "🔴",
+    }
+
+    # Localized risk-level labels; ``MEDIUM`` is an alias for ``MED``
+    # (the level value used by :mod:`src.analyzer.risk`).
+    _LEVEL_LABELS: ClassVar[dict[str, dict[str, str]]] = {
+        "ru": {
+            "LOW": "Низкий",
+            "MED": "Средний",
+            "MEDIUM": "Средний",
+            "HIGH": "Высокий",
+            "CRITICAL": "Критический",
+        },
+        "en": {
+            "LOW": "Low",
+            "MED": "Medium",
+            "MEDIUM": "Medium",
+            "HIGH": "High",
+            "CRITICAL": "Critical",
+        },
+    }
+
+    _RISK_LINE: ClassVar[dict[str, str]] = {
+        "ru": "📊 Риск: {emoji} {level}",
+        "en": "📊 Risk: {emoji} {level}",
+    }
+
+    _REVIEWERS_LINE: ClassVar[dict[str, str]] = {
+        "ru": "👥 Ревьюеры: {reviewers}",
+        "en": "👥 Reviewers: {reviewers}",
+    }
+
+    _NO_REVIEWERS: ClassVar[dict[str, str]] = {"ru": "нет", "en": "none"}
 
     def compose(
         self,
@@ -44,6 +84,7 @@ class NotificationComposer:
         pr_url: str,
         risk: RiskAssessment,
         reviewers: list[Reviewer],
+        language: str = "ru",
     ) -> str:
         """Build the formatted message text for a reviewed PR.
 
@@ -52,19 +93,27 @@ class NotificationComposer:
             pr_url: Canonical PR URL.
             risk: LLM risk assessment for the PR.
             reviewers: Recommended reviewers (may be empty).
+            language: Template language, ``"ru"`` (default) or ``"en"``;
+                unknown values fall back to ``"ru"``.
 
         Returns:
             The complete MarkdownV2 message string.
         """
+        lang = language.strip().lower()
+        if lang not in self._LEVEL_LABELS:
+            lang = "ru"
         emoji = self.RISK_EMOJI.get(risk.level, "🟡")
+        level_label = self._LEVEL_LABELS[lang].get(risk.level, risk.level)
         lines = [
-            f"{emoji} *{risk.level}* — {_escape_md_v2(pr_title)}",
-            f"→ {_escape_md_v2(pr_url)}",
+            f"🔀 PR: {_escape_md_v2(pr_title)}",
+            self._RISK_LINE[lang].format(emoji=emoji, level=level_label),
         ]
-        lines.extend(f"• {_escape_md_v2(reason)}" for reason in risk.reasons[:2])
+        if risk.reasons:
+            lines.append("💡 " + " • ".join(_escape_md_v2(r) for r in risk.reasons[:2]))
         if reviewers:
             reviewer_part = ", ".join(f"@{_escape_md_v2(r.login)}" for r in reviewers)
         else:
-            reviewer_part = "none"
-        lines.append(f"👥 Reviewers: {reviewer_part}")
+            reviewer_part = self._NO_REVIEWERS[lang]
+        lines.append(self._REVIEWERS_LINE[lang].format(reviewers=reviewer_part))
+        lines.append(f"🔗 {_escape_md_v2(pr_url)}")
         return "\n".join(lines)

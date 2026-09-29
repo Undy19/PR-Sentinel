@@ -214,10 +214,16 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
             diff=diff,
             pr_title=title,
             pr_body=pr.get("body") or "",
+            language=deps.settings.notification_language,
             model=deps.settings.openai_model,
+            api_key=deps.settings.openai_api_key,
+            base_url=deps.settings.openai_base_url,
         )
         reviewers = await deps.graph.recommend_reviewers(files)
-        message = deps.composer.compose(pr_title=title, pr_url=url, risk=risk, reviewers=reviewers)
+        message = deps.composer.compose(
+            pr_title=title, pr_url=url, risk=risk, reviewers=reviewers,
+            language=deps.settings.notification_language,
+        )
         await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
         await deps.db.record_pr(
             pr_number, title, url, risk.level, datetime.now(UTC).isoformat()

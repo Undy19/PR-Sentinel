@@ -136,7 +136,7 @@ async def test_webhook_valid_pull_request(
     (chat_id, text), _ = deps.bot.send_notification.call_args
     assert chat_id == CHAT_ID
     assert isinstance(text, str)
-    assert "MED" in text
+    assert "📊 Риск: 🟡 Средний" in text
 
     history = await deps.db.get_pr_history()
     assert len(history) == 1
