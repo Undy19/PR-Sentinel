@@ -210,7 +210,12 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
             logger.error("GitHub API request failed for PR %s: %s", pr_number, exc)
             raise HTTPException(status_code=502, detail="failed to fetch PR from GitHub") from exc
 
-        risk = await analyze_pr(diff=diff, pr_title=title, pr_body=pr.get("body") or "")
+        risk = await analyze_pr(
+            diff=diff,
+            pr_title=title,
+            pr_body=pr.get("body") or "",
+            model=deps.settings.openai_model,
+        )
         reviewers = await deps.graph.recommend_reviewers(files)
         message = deps.composer.compose(pr_title=title, pr_url=url, risk=risk, reviewers=reviewers)
         await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
