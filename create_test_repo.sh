@@ -1,7 +1,16 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-REPO_DIR="D:/projects/opd/test-repo"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="${SCRIPT_DIR}/test-repo"
+if [ -n "$1" ]; then
+    REPO_DIR="$1"
+fi
+
+cleanup() {
+    rm -rf "$REPO_DIR"
+}
+trap cleanup ERR INT TERM
 
 rm -rf "$REPO_DIR"
 mkdir -p "$REPO_DIR"
