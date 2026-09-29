@@ -33,6 +33,8 @@ class PRBot:
         Signal handling is owned by :mod:`src.main`, so the dispatcher's
         built-in signal handlers are disabled to avoid double handling.
         """
+        # Delete any existing webhook to avoid conflict with polling
+        await self.bot.delete_webhook()
         await self.dp.start_polling(
             self.bot, handle_signals=False, close_bot_session=False
         )
