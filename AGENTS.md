@@ -12,7 +12,7 @@
 
 ## Architecture & Data Flow
 
-Planned architecture (not yet implemented):
+**Architecture:**
 
 ```
 GitHub pull_request event
