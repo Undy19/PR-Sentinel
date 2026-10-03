@@ -25,7 +25,7 @@ from openai.types.chat import ChatCompletionMessageParam
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gpt-4o"
-REQUEST_TIMEOUT = 30.0
+REQUEST_TIMEOUT = 15.0
 BASE_BACKOFF = 2.0
 MAX_BACKOFF = 30.0
 MAX_RETRIES = 3
