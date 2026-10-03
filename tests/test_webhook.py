@@ -86,6 +86,7 @@ async def webhook_env(tmp_path: Path) -> Env:
             "github_repo": "owner/repo",
             "telegram_chat_id": CHAT_ID,
             "database_path": str(tmp_path / "pr_sentinel.db"),
+            "replay_protection_enabled": True,
         }
     )
     bot = PRBot("123:TEST")

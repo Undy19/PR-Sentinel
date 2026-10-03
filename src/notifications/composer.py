@@ -101,7 +101,7 @@ class NotificationComposer:
         """
         lang = language.strip().lower()
         if lang not in self._LEVEL_LABELS:
-            lang = "ru"
+            lang = "en"
         emoji = self.RISK_EMOJI.get(risk.level, "🟡")
         level_label = self._LEVEL_LABELS[lang].get(risk.level, risk.level)
         lines = [
