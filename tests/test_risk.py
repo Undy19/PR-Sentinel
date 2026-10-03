@@ -67,7 +67,7 @@ async def test_analyze_pr_malformed_json() -> None:
     result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result.level == "HIGH"
-    assert "parse" in result.reasons[0].lower()
+    assert result.reasons[0] == "Не удалось разобрать ответ модели"
 
 
 async def test_analyze_pr_rate_limit_retry() -> None:
@@ -93,7 +93,7 @@ async def test_analyze_pr_rate_limit_exhausted() -> None:
         result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result.level == "HIGH"
-    assert "rate limit" in result.reasons[0].lower()
+    assert result.reasons[0] == "Превышен лимит запросов к модели"
     # 1 initial attempt + 3 retries.
     assert client.chat.completions.create.await_count == 4
     assert sleep.await_count == 3
@@ -107,6 +107,6 @@ async def test_analyze_pr_timeout() -> None:
         result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result.level == "HIGH"
-    assert "timed out" in result.reasons[0].lower()
+    assert result.reasons[0] == "Запрос к модели прерван по таймауту"
     # 1 initial attempt + 3 retries.
     assert client.chat.completions.create.await_count == 4
