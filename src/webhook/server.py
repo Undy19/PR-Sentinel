@@ -268,7 +268,7 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
 
         # Replay protection: skip deliveries we have already seen (SEC-09).
         delivery_id = request.headers.get("X-GitHub-Delivery")
-        if delivery_id:
+        if delivery_id and deps.settings.replay_protection_enabled:
             if await deps.db.is_delivery_seen(delivery_id):
                 logger.info("skipping duplicate delivery %s", delivery_id)
                 return JSONResponse({"status": "duplicate"}, status_code=200)

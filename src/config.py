@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     github_repo: str  # "owner/repo" format
     telegram_chat_id: int
     notification_language: str = "ru"  # "ru" or "en"
+    replay_protection_enabled: bool = True  # set False to skip X-GitHub-Delivery dedup (SEC-09)
 
     class Config:
         env_file = ".env"
