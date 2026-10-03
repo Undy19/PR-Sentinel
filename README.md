@@ -28,4 +28,3 @@ webhook server, and the test suite.
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, style, testing, commits, PRs, branch protection
 - [`COMMIT_CONVENTIONS.md`](COMMIT_CONVENTIONS.md) — Conventional Commits reference
-- [`table.md`](table.md) — project charter (Russian)

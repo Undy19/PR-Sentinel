@@ -8,7 +8,7 @@
 
 **Scope:** Single repository, ≤10 developers, ≤50 PRs/day.
 
-**Current State:** Specification only. No source code exists. The only file in the repository is `table.md` (project charter in Russian).
+**Current State:** Implemented — bot, webhook server, risk analyzer, expertise graph, and test suite exist. See `README.md` for overview.
 
 ## Architecture & Data Flow
 
@@ -114,7 +114,6 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 
 | File | Purpose |
 |------|---------|
-| `table.md` | Project charter/specification (Russian) — the source of truth for requirements, acceptance criteria, and scope |
 | `COMMIT_CONVENTIONS.md` | Commit message reference (Conventional Commits 1.0) |
 | `CONTRIBUTING.md` | Contributor guide (setup, style, testing, commits, PRs) |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR template |
