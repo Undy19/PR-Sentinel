@@ -8,11 +8,11 @@
 
 **Scope:** Single repository, ≤10 developers, ≤50 PRs/day.
 
-**Current State:** Specification only. No source code exists. The only file in the repository is `table.md` (project charter in Russian).
+**Current State:** Implemented — bot, webhook server, risk analyzer, expertise graph, and test suite exist. See `README.md` for overview.
 
 ## Architecture & Data Flow
 
-Planned architecture (not yet implemented):
+**Architecture:**
 
 ```
 GitHub pull_request event
@@ -103,11 +103,21 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - Use environment variables for secrets (TELEGRAM_BOT_TOKEN, GITHUB_TOKEN, OPENAI_API_KEY)
 - Load config at startup, not inline
 
+**Commits:**
+- Follow Conventional Commits 1.0: `<type>(<scope>): <description>`
+- Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- Enforced in CI via commitlint on PRs and pushes to `main`
+- Full reference: `COMMIT_CONVENTIONS.md`
+- Examples: `feat(analyzer): add retry on 429`, `fix(bot): close session on shutdown`
+
 ## Important Files
 
 | File | Purpose |
 |------|---------|
-| `table.md` | Project charter/specification (Russian) — the source of truth for requirements, acceptance criteria, and scope |
+| `COMMIT_CONVENTIONS.md` | Commit message reference (Conventional Commits 1.0) |
+| `CONTRIBUTING.md` | Contributor guide (setup, style, testing, commits, PRs) |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR template |
+| `.github/workflows/commitlint.yaml` | Commit message CI check (commitlint) |
 
 ## Runtime/Tooling Preferences
 
@@ -116,7 +126,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - **Runtime:** Standard CPython; no Bun/Node/Deno
 - **Database:** SQLite (stdlib, no external server)
 - **Deployment:** Docker container
-- **CI/CD:** Planned (GitHub Actions expected, not yet configured)
+- **CI/CD:** Configured — GitHub Actions workflow at `.github/workflows/ci.yaml` (ruff, black, mypy, pytest with 60% coverage gate)
 - **External APIs:** GitHub API (via PyGithub), OpenAI API
 
 ## Testing & QA

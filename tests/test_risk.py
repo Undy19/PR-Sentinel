@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -102,7 +101,7 @@ async def test_analyze_pr_rate_limit_exhausted() -> None:
 
 async def test_analyze_pr_timeout() -> None:
     client = _mock_client()
-    client.chat.completions.create.side_effect = asyncio.TimeoutError()
+    client.chat.completions.create.side_effect = TimeoutError()
 
     with patch("src.analyzer.risk.asyncio.sleep", new=AsyncMock()):
         result = await analyze_pr("diff", "PR title", "PR body", client=client)

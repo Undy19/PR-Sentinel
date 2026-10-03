@@ -73,7 +73,9 @@ def test_compose_special_chars() -> None:
     composer = NotificationComposer()
     risk = RiskAssessment(level="MED", reasons=["Needs review"], confidence=0.7)
 
-    out = composer.compose("test [feature] (v1.0)", "https://example.com/pr/3", risk, [], language="en")
+    out = composer.compose(
+        "test [feature] (v1.0)", "https://example.com/pr/3", risk, [], language="en"
+    )
 
     # MarkdownV2 specials in the title must be backslash-escaped.
     assert "test \\[feature\\] \\(v1\\.0\\)" in out

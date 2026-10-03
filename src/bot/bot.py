@@ -36,7 +36,9 @@ class PRBot:
         # Delete any existing webhook to avoid conflict with polling
         await self.bot.delete_webhook()
         await self.dp.start_polling(
-            self.bot, handle_signals=False, close_bot_session=False
+            self.bot,
+            handle_signals=False,
+            close_bot_session=False,
         )
 
     async def stop(self) -> None:

@@ -170,8 +170,7 @@ class ExpertiseGraph:
         await conn.execute("DELETE FROM file_expertise")
 
         commit_rows = [
-            (sha, author, login, ",".join(files), ts)
-            for sha, author, login, ts, files in commits
+            (sha, author, login, ",".join(files), ts) for sha, author, login, ts, files in commits
         ]
         await conn.executemany(
             "INSERT OR IGNORE INTO commits (sha, author, author_login, files, timestamp) "
@@ -213,11 +212,7 @@ class ExpertiseGraph:
 
         for line in output.splitlines():
             parts = line.split("|", 3)
-            if (
-                len(parts) == 4
-                and len(parts[0]) == 40
-                and all(c in _HEX_DIGITS for c in parts[0])
-            ):
+            if len(parts) == 4 and len(parts[0]) == 40 and all(c in _HEX_DIGITS for c in parts[0]):
                 if current is not None:
                     commits.append(current)
                 sha, author, email, ts = parts
@@ -230,9 +225,7 @@ class ExpertiseGraph:
             commits.append(current)
         return commits
 
-    async def recommend_reviewers(
-        self, files: list[str], max_reviewers: int = 2
-    ) -> list[Reviewer]:
+    async def recommend_reviewers(self, files: list[str], max_reviewers: int = 2) -> list[Reviewer]:
         """Recommend the top reviewers for the given file paths.
 
         Score per author: ``(commit_count / max_commits) * 0.4 +
@@ -295,8 +288,7 @@ class ExpertiseGraph:
         """Best-known display name for a login (from their latest commit)."""
         conn = self._require_conn()
         cursor = await conn.execute(
-            "SELECT author FROM commits WHERE author_login = ? "
-            "ORDER BY timestamp DESC LIMIT 1",
+            "SELECT author FROM commits WHERE author_login = ? " "ORDER BY timestamp DESC LIMIT 1",
             (login,),
         )
         row = await cursor.fetchone()

@@ -80,8 +80,6 @@ async def test_uses_before_connect(tmp_path: Path) -> None:
     database = Database(str(tmp_path / "pr_sentinel.db"))
 
     with pytest.raises(RuntimeError, match="not connected"):
-        await database.record_pr(
-            1, "t", "u", "LOW", "2026-09-28T00:00:00+00:00"
-        )
+        await database.record_pr(1, "t", "u", "LOW", "2026-09-28T00:00:00+00:00")
     with pytest.raises(RuntimeError, match="not connected"):
         await database.get_pr_history(5)

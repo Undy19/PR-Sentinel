@@ -1,0 +1,10 @@
+{
+  "name": "pr-sentinel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PR Sentinel: Telegram bot + FastAPI webhook for GitHub PR risk analysis",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1"
+  }
+}
