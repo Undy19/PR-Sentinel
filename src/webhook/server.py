@@ -10,8 +10,8 @@ server or constructing any real services.
 """
 
 from __future__ import annotations
-import asyncio
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -114,7 +114,10 @@ async def _process_work_item(deps: WebhookDeps, item: WorkItem) -> None:
     )
     reviewers = await deps.graph.recommend_reviewers(files)
     message = deps.composer.compose(
-        pr_title=item.title, pr_url=item.url, risk=risk, reviewers=reviewers,
+        pr_title=item.title,
+        pr_url=item.url,
+        risk=risk,
+        reviewers=reviewers,
         language=item.language,
     )
     await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
@@ -207,9 +210,7 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
         else:
             app.state.deps = deps
         app.state.queue = asyncio.Queue[WorkItem](maxsize=QUEUE_MAX_SIZE)
-        app.state.worker = asyncio.create_task(
-            _queue_worker(app.state.deps, app.state.queue)
-        )
+        app.state.worker = asyncio.create_task(_queue_worker(app.state.deps, app.state.queue))
         yield
         worker: asyncio.Task[None] = app.state.worker
         worker.cancel()
@@ -242,9 +243,7 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
         body = await request.body()
 
         if request.headers.get("X-GitHub-Event") != "pull_request":
-            raise HTTPException(
-                status_code=400, detail="expected X-GitHub-Event: pull_request"
-            )
+            raise HTTPException(status_code=400, detail="expected X-GitHub-Event: pull_request")
         if not _verify_signature(
             body,
             request.headers.get("X-Hub-Signature-256"),

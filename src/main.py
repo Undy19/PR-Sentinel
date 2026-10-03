@@ -31,9 +31,7 @@ logger = logging.getLogger(__name__)
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
 
-def _install_signal_handlers(
-    loop: asyncio.AbstractEventLoop, stop_event: asyncio.Event
-) -> None:
+def _install_signal_handlers(loop: asyncio.AbstractEventLoop, stop_event: asyncio.Event) -> None:
     """Map SIGINT/SIGTERM onto *stop_event*.
 
     Prefers ``loop.add_signal_handler`` (POSIX); on platforms where it is

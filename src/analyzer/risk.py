@@ -147,9 +147,7 @@ async def analyze_pr(
 
     prompt = _build_user_prompt(diff, pr_title, pr_body)
     system_prompt = (
-        SYSTEM_PROMPT
-        + " "
-        + LANGUAGE_INSTRUCTIONS.get(language, LANGUAGE_INSTRUCTIONS["en"])
+        SYSTEM_PROMPT + " " + LANGUAGE_INSTRUCTIONS.get(language, LANGUAGE_INSTRUCTIONS["en"])
     )
     messages: list[ChatCompletionMessageParam] = [
         {"role": "system", "content": system_prompt},
@@ -166,9 +164,7 @@ async def analyze_pr(
             return _parse_assessment(response.choices[0].message.content or "")
         except openai.RateLimitError:
             if attempt >= MAX_RETRIES:
-                logger.warning(
-                    "OpenAI rate limit persisted after %d retries", MAX_RETRIES
-                )
+                logger.warning("OpenAI rate limit persisted after %d retries", MAX_RETRIES)
                 return RiskAssessment(
                     level="HIGH", reasons=["LLM rate limit exceeded"], confidence=0.0
                 )
@@ -197,9 +193,7 @@ async def analyze_pr(
             backoff = min(backoff * 2, MAX_BACKOFF)
         except openai.OpenAIError as exc:
             logger.warning("OpenAI API error (not retried): %s", exc)
-            return RiskAssessment(
-                level="HIGH", reasons=["LLM API error"], confidence=0.0
-            )
+            return RiskAssessment(level="HIGH", reasons=["LLM API error"], confidence=0.0)
 
     # Unreachable: every path above returns, but keeps static analysis happy.
     return RiskAssessment(level="HIGH", reasons=["LLM analysis failed"], confidence=0.0)
