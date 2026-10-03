@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Self
@@ -138,25 +139,33 @@ class ExpertiseGraph:
         """
         conn = self._require_conn()
 
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "git",
-                "log",
-                "--format=%H|%an|%ae|%aI",
-                "--name-only",
+        loop = asyncio.get_running_loop()
+
+        def _run_git() -> subprocess.CompletedProcess[bytes]:
+            return subprocess.run(
+                [
+                    "git",
+                    "log",
+                    "--format=%H|%an|%ae|%aI",
+                    "--name-only",
+                ],
                 cwd=repo_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                capture_output=True,
+                check=False,
             )
-            stdout, stderr = await proc.communicate()
+
+        try:
+            proc = await loop.run_in_executor(None, _run_git)
         except FileNotFoundError as exc:
             raise RuntimeError("git executable not found; is git installed?") from exc
 
         if proc.returncode != 0:
             raise RuntimeError(
                 f"git log failed in {repo_path!r} (exit {proc.returncode}): "
-                f"{stderr.decode('utf-8', 'replace').strip()}"
+                f"{proc.stderr.decode('utf-8', 'replace').strip()}"
             )
+
+        stdout = proc.stdout
 
         commits = self._parse_git_log(stdout.decode("utf-8", "replace"))
         if not commits:

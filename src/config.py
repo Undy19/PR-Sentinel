@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+import logging
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+_VALID_LANGUAGES = frozenset({"ru", "en"})
 
 
 class Settings(BaseSettings):
     telegram_bot_token: str
     github_token: str
-    github_webhook_secret: str
+    github_webhook_secret: str | None = (
+        None  # dedicated HMAC key; falls back to github_token when unset (SEC-02)
+    )
     openai_api_key: str
     openai_base_url: str | None = None
     openai_model: str = "gpt-4o"
@@ -14,9 +23,29 @@ class Settings(BaseSettings):
     github_repo: str  # "owner/repo" format
     telegram_chat_id: int
     notification_language: str = "ru"  # "ru" or "en"
+    replay_protection_enabled: bool = True  # set False to skip X-GitHub-Delivery dedup (SEC-09)
 
     class Config:
         env_file = ".env"
+
+    @field_validator("notification_language")
+    @classmethod
+    def _normalize_language(cls, value: str) -> str:
+        """Coerce *value* to a supported language code.
+
+        Strips/lowers the input and maps any unknown code (e.g. ``"de"``,
+        ``"RU"``) to the ``"en"`` fallback, logging a warning. Normalizing at
+        the source keeps the LLM ``reasons`` language (analyzer) and the
+        notification template language (composer) consistent.
+        """
+        lang = value.strip().lower()
+        if lang not in _VALID_LANGUAGES:
+            logger.warning(
+                "Unknown NOTIFICATION_LANGUAGE %r; falling back to 'en' " "(supported: ru, en)",
+                value,
+            )
+            return "en"
+        return lang
 
 
 _settings: Settings | None = None

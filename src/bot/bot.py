@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.exceptions import (
+    TelegramNetworkError,
+    TelegramRetryAfter,
+    TelegramServerError,
+)
 from aiogram.types import Message
 
 logger = logging.getLogger(__name__)
+
+# Transient Telegram failures worth retrying: network/connectivity,
+# rate-limit (429), and server-side (5xx). Non-retriable 4xx errors
+# (bad request, unauthorized, ...) propagate immediately.
+_RETRIABLE = (TelegramNetworkError, TelegramRetryAfter, TelegramServerError)
+_SEND_MAX_ATTEMPTS = 5
 
 
 class PRBot:
@@ -54,5 +66,33 @@ class PRBot:
         await self.bot.session.close()
 
     async def send_notification(self, chat_id: int, text: str) -> None:
-        """Send a message to the configured chat."""
-        await self.bot.send_message(chat_id, text, parse_mode="MarkdownV2")
+        """Send a message to the configured chat.
+
+        Retries transient failures (network errors, 429 rate-limit, 5xx)
+        up to ``_SEND_MAX_ATTEMPTS`` times with a linear 1s, 2s, 3s, ...
+        backoff between attempts. Non-retriable 4xx errors raise
+        immediately.
+        """
+        for attempt in range(1, _SEND_MAX_ATTEMPTS + 1):
+            try:
+                await self.bot.send_message(chat_id, text, parse_mode="MarkdownV2")
+                return
+            except _RETRIABLE as exc:
+                if attempt == _SEND_MAX_ATTEMPTS:
+                    logger.error(
+                        "Telegram send to chat %s failed after %d attempts: %s",
+                        chat_id,
+                        _SEND_MAX_ATTEMPTS,
+                        exc,
+                    )
+                    raise
+                delay = attempt
+                logger.warning(
+                    "Telegram send to chat %s failed (attempt %d/%d): %s; " "retrying in %ds",
+                    chat_id,
+                    attempt,
+                    _SEND_MAX_ATTEMPTS,
+                    exc,
+                    delay,
+                )
+                await asyncio.sleep(delay)

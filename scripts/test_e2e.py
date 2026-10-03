@@ -31,7 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import get_settings
-from src.webhook.server import _close_bundle, build_default_deps, create_app
+from src.webhook.server import _close_bundle, _webhook_secret, build_default_deps, create_app
 
 HOST = "127.0.0.1"
 PORT = 8000
@@ -40,8 +40,8 @@ WEBHOOK_URL = f"http://{HOST}:{PORT}/webhook/github"
 # Simulated GitHub ``pull_request`` webhook payload.
 PAYLOAD: dict = {
     "action": "opened",
-    "number": 1,
     "pull_request": {
+        "number": 1,
         "title": "Test PR: Add feature",
         "html_url": "https://github.com/test/repo/pull/1",
         "body": "Adds a new feature",
@@ -91,7 +91,7 @@ async def amain() -> int:
         body = json.dumps(PAYLOAD).encode("utf-8")
         headers = {
             "X-GitHub-Event": "pull_request",
-            "X-Hub-Signature-256": _sign(body, settings.github_token),
+            "X-Hub-Signature-256": _sign(body, _webhook_secret(settings)),
             "Content-Type": "application/json",
         }
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -128,4 +128,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    _policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
+    if _policy is not None:
+        asyncio.set_event_loop_policy(_policy())
     sys.exit(main())
