@@ -6,7 +6,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     telegram_bot_token: str
     github_token: str
-    github_webhook_secret: str
+    github_webhook_secret: str | None = (
+        None  # dedicated HMAC key; falls back to github_token when unset (SEC-02)
+    )
     openai_api_key: str
     openai_base_url: str | None = None
     openai_model: str = "gpt-4o"

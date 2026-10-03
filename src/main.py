@@ -115,4 +115,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    _policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
+    if _policy is not None:
+        asyncio.set_event_loop_policy(_policy())
     asyncio.run(main())

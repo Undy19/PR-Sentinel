@@ -124,6 +124,72 @@ async def webhook_env(tmp_path: Path) -> Env:
     await db.close()
 
 
+@pytest.fixture
+async def webhook_env_fallback(tmp_path: Path) -> Env:
+    """Bundle with ``GITHUB_WEBHOOK_SECRET`` unset.
+
+    The webhook endpoint must then verify against ``GITHUB_TOKEN`` (SEC-02
+    fallback) so pre-SEC-02 deployments keep working.
+    """
+    settings = Settings.model_validate(
+        {
+            "telegram_bot_token": "123:TEST",
+            "github_token": GITHUB_TOKEN,
+            "openai_api_key": "test-openai-key",
+            "github_repo": "owner/repo",
+            "telegram_chat_id": CHAT_ID,
+            "database_path": str(tmp_path / "pr_sentinel.db"),
+        }
+    )
+    bot = PRBot("123:TEST")
+    bot.send_notification = AsyncMock()
+    graph = await ExpertiseGraph.create(str(tmp_path / "expertise.db"))
+    composer = NotificationComposer()
+    github = _make_github_mock()
+    db = Database(str(tmp_path / "pr_sentinel.db"))
+    await db.connect()
+
+    deps = WebhookDeps(
+        settings=settings,
+        bot=bot,
+        graph=graph,
+        composer=composer,
+        github=github,
+        db=db,
+    )
+    app = create_app(deps=deps)
+    app.state.deps = deps
+    queue: asyncio.Queue[WorkItem] = asyncio.Queue(maxsize=100)
+    app.state.queue = queue
+    app.state.worker = asyncio.create_task(_queue_worker(deps, queue))
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client, deps, queue
+
+    app.state.worker.cancel()
+    with suppress(asyncio.CancelledError):
+        await app.state.worker
+    await graph.close()
+    await db.close()
+
+
+async def test_webhook_fallback_to_github_token(webhook_env_fallback: Env) -> None:
+    client, deps, _ = webhook_env_fallback
+    assert deps.settings.github_webhook_secret is None
+    body = json.dumps(PAYLOAD).encode("utf-8")
+    signature = "sha256=" + hmac.new(GITHUB_TOKEN.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    headers = {
+        "X-GitHub-Event": "pull_request",
+        "X-Hub-Signature-256": signature,
+    }
+
+    response = await client.post("/webhook/github", content=body, headers=headers)
+
+    assert response.status_code == 202
+    assert response.json() == {"status": "accepted"}
+
+
 async def test_health_endpoint(webhook_env: Env) -> None:
     client, _, _ = webhook_env
 

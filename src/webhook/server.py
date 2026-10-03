@@ -77,6 +77,16 @@ def _verify_signature(body: bytes, signature: str | None, secret: str) -> bool:
     return hmac.compare_digest(expected, signature.removeprefix("sha256="))
 
 
+def _webhook_secret(settings: Settings) -> str:
+    """Return the HMAC key used to verify ``X-Hub-Signature-256``.
+
+    Prefers the dedicated :attr:`Settings.github_webhook_secret`. When it is
+    unset, falls back to the GitHub API token so deployments that predate the
+    dedicated secret keep working (SEC-02 recommends setting a separate one).
+    """
+    return settings.github_webhook_secret or settings.github_token
+
+
 async def _fetch_pr_diff_and_files(
     client: httpx.AsyncClient, repo: str, pr_number: int
 ) -> tuple[str, list[str]]:
@@ -209,6 +219,11 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
             app.state.deps_owned = True
         else:
             app.state.deps = deps
+        if app.state.deps.settings.github_webhook_secret is None:
+            logger.warning(
+                "GITHUB_WEBHOOK_SECRET is not set; verifying X-Hub-Signature-256 "
+                "against GITHUB_TOKEN (SEC-02 recommends a dedicated secret)"
+            )
         app.state.queue = asyncio.Queue[WorkItem](maxsize=QUEUE_MAX_SIZE)
         app.state.worker = asyncio.create_task(_queue_worker(app.state.deps, app.state.queue))
         yield
@@ -247,7 +262,7 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
         if not _verify_signature(
             body,
             request.headers.get("X-Hub-Signature-256"),
-            deps.settings.github_webhook_secret,
+            _webhook_secret(deps.settings),
         ):
             raise HTTPException(status_code=401, detail="invalid X-Hub-Signature-256")
 
