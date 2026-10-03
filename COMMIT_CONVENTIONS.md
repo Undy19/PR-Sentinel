@@ -17,6 +17,7 @@ commits fail on `pull_request` and on push to `main`.
 
 - `type` is required; `scope` (e.g. `analyzer`, `bot`, `webhook`, `db`) is
   optional; the summary should be imperative and at most 72 characters.
+- Body lines must not exceed 100 characters (`body-max-line-length`).
 - A breaking change is marked with `!` after the type/scope and/or a
   `BREAKING CHANGE:` footer describing the change.
 
