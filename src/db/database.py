@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import aiosqlite
@@ -17,6 +18,10 @@ CREATE TABLE IF NOT EXISTS pr_history (
     url TEXT,
     risk_level TEXT,
     timestamp TEXT
+);
+CREATE TABLE IF NOT EXISTS seen_deliveries (
+    delivery_id TEXT PRIMARY KEY,
+    seen_at TEXT
 );
 """
 
@@ -77,6 +82,32 @@ class Database:
             }
             for row in rows
         ]
+
+    async def is_delivery_seen(self, delivery_id: str) -> bool:
+        """Return True if *delivery_id* was already recorded (replay check)."""
+        conn = self._require_conn()
+        cursor = await conn.execute(
+            "SELECT 1 FROM seen_deliveries WHERE delivery_id = ?",
+            (delivery_id,),
+        )
+        row = await cursor.fetchone()
+        return row is not None
+
+    async def mark_delivery_seen(self, delivery_id: str) -> None:
+        """Record *delivery_id* as seen (UTC ISO timestamp, 24h retention)."""
+        conn = self._require_conn()
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(hours=24)
+        await conn.execute(
+            "INSERT OR IGNORE INTO seen_deliveries (delivery_id, seen_at) "
+            "VALUES (?, ?)",
+            (delivery_id, now.isoformat()),
+        )
+        await conn.execute(
+            "DELETE FROM seen_deliveries WHERE seen_at < ?",
+            (cutoff.isoformat(),),
+        )
+        await conn.commit()
 
     async def close(self) -> None:
         """Close the connection (idempotent)."""
