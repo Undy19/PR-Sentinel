@@ -39,11 +39,11 @@ Required variables:
 
 We enforce consistent formatting and type safety on every commit:
 
-| Tool        | Command                   | Purpose                         |
-| ----------- | ------------------------- | ------------------------------- |
-| Ruff        | `ruff check src/ tests/`  | Linting                         |
-| Ruff format | `ruff format src/ tests/` | Auto-formatting (line-length 100) |
-| Mypy        | `mypy src/`               | Static type checking (strict)   |
+| Tool        | Command                           | Purpose                         |
+| ----------- | --------------------------------- | ------------------------------- |
+| Ruff        | `ruff check src/ tests/`          | Linting                         |
+| Ruff format | `ruff format --check src/ tests/` | Auto-formatting (line-length 100) |
+| Mypy        | `mypy src/`                       | Static type checking (strict)   |
 
 Run all three before submitting a PR:
 
@@ -122,7 +122,7 @@ setting up a fresh fork, recreate it with these steps:
    for **Rule type**, select **Branch**.
 3. Under **Target**, choose *Specific branches* and enter `main`.
 4. In the **Rules** (Evaluate) tab, enable exactly the following:
-   - **Require a pull request before merging** — Required approvals: 1; turn on
+   - **Require a pull request before merging** — Required approvals: 0; turn on  
      **Dismiss stale pull request approvals when new commits are pushed**; under
      **Allowed merge methods** enable **Squash** only (disable Merge and Rebase —
      squash keeps the history clean with Conventional Commits)

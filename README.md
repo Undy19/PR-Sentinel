@@ -46,6 +46,7 @@ Russian by default; `NOTIFICATION_LANGUAGE=en` switches them to English):
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, style, testing, commits, PRs, branch protection
 - [`COMMIT_CONVENTIONS.md`](COMMIT_CONVENTIONS.md) — Conventional Commits reference
+- [`SECURITY.md`](SECURITY.md) — security policy, vulnerability reporting, supported versions
 - [`docs/architecture.md`](docs/architecture.md) — architecture, HTTP API, data model, configuration
 
 ## License
