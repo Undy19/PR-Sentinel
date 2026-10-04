@@ -8,11 +8,13 @@ LLM ``reasons`` language (analyzer) and the notification template language
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from pr_sentinel.config import Settings
+import pr_sentinel.config as config_module
+from pr_sentinel.config import Settings, SettingsError, load_settings
 
 
 def _settings(language: str) -> Settings:
@@ -113,3 +115,16 @@ def test_invalid_repo_format_rejected(repo: str) -> None:
 def test_repo_format_normalized() -> None:
     settings = Settings(_env_file=None, **_settings_kwargs(github_repo="  myorg / myrepo  "))
     assert settings.github_repo == "myorg/myrepo"
+
+
+def test_load_settings_message(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``load_settings`` converts a ValidationError into an actionable message."""
+    monkeypatch.setattr(config_module, "_settings", None)
+    monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
+    monkeypatch.chdir(tmp_path)  # do not pick up the repo's .env
+    with pytest.raises(SettingsError) as excinfo:
+        load_settings()
+    message = str(excinfo.value)
+    assert "GITHUB_WEBHOOK_SECRET" in message
+    assert "is required but not set" in message
+    assert ".env.example" in message

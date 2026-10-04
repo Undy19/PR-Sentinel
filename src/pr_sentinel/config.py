@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,47 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings.model_validate({})
     return _settings
+
+
+class SettingsError(RuntimeError):
+    """Configuration is missing or invalid; ``str(exc)`` is user-readable."""
+
+
+def _format_settings_error(exc: ValidationError) -> str:
+    """Render a pydantic ``ValidationError`` as an actionable message."""
+    lines = [
+        (
+            "Configuration error: the service cannot start. "
+            "Fix .env (template: .env.example) and restart:"
+        )
+    ]
+    for err in exc.errors():
+        field = str(err["loc"][0]) if err["loc"] else "unknown"
+        env_var = field.upper()
+        if err["type"] == "missing":
+            lines.append(f"  - {env_var}: is required but not set")
+        elif err["type"] == "string_too_short":
+            lines.append(f"  - {env_var}: must not be empty")
+        else:
+            lines.append(f"  - {env_var}: {err['msg']}")
+    return "\n".join(lines)
+
+
+def load_settings() -> Settings:
+    """Build the process-wide settings with a user-readable failure mode.
+
+    Raises:
+        SettingsError: if any required variable is missing or invalid; the
+            message lists every offending ``ENV_VAR`` by name.
+    """
+    try:
+        return get_settings()
+    except ValidationError as exc:
+        error = SettingsError(_format_settings_error(exc))
+        # The ValidationError is fully summarized in the message; suppress the
+        # implicit context so entry points don't print a pydantic traceback.
+        error.__suppress_context__ = True
+        raise error
 
 
 def __getattr__(name: str) -> object:

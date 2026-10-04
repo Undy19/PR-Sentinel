@@ -21,7 +21,7 @@ from types import FrameType
 import uvicorn
 
 from pr_sentinel.bot.bot import PRBot
-from pr_sentinel.config import get_settings
+from pr_sentinel.config import SettingsError, load_settings
 from pr_sentinel.db.database import Database
 from pr_sentinel.graph.expertise import ExpertiseGraph
 from pr_sentinel.notifications.composer import NotificationComposer
@@ -56,7 +56,11 @@ def _install_signal_handlers(loop: asyncio.AbstractEventLoop, stop_event: asynci
 async def main() -> None:
     """Create all services, then run the bot and webhook server until stopped."""
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-    settings = get_settings()
+    try:
+        settings = load_settings()
+    except SettingsError as exc:
+        logger.error("\n%s", exc)
+        raise SystemExit(1) from exc
 
     db = Database(settings.database_path)
     await db.connect()

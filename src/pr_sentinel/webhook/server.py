@@ -28,7 +28,7 @@ from fastapi.responses import JSONResponse
 
 from pr_sentinel.analyzer.risk import analyze_pr
 from pr_sentinel.bot.bot import PRBot
-from pr_sentinel.config import Settings, get_settings
+from pr_sentinel.config import Settings, SettingsError, load_settings
 from pr_sentinel.db.database import Database
 from pr_sentinel.graph.expertise import ExpertiseGraph
 from pr_sentinel.notifications.composer import NotificationComposer
@@ -188,7 +188,7 @@ async def get_deps(request: Request) -> WebhookDeps:
     state = request.app.state
     deps: WebhookDeps | None = getattr(state, "deps", None)
     if deps is None:
-        deps = await build_default_deps(get_settings())
+        deps = await build_default_deps(load_settings())
         state.deps = deps
     return deps
 
@@ -205,7 +205,11 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if deps is None:
-            app.state.deps = await build_default_deps(get_settings())
+            try:
+                app.state.deps = await build_default_deps(load_settings())
+            except SettingsError as exc:
+                logger.error("%s", exc)
+                raise
             app.state.deps_owned = True
         else:
             app.state.deps = deps

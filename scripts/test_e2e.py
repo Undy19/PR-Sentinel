@@ -30,7 +30,7 @@ _SRC_ROOT = str(Path(__file__).resolve().parent.parent / "src")
 if _SRC_ROOT not in sys.path:
     sys.path.insert(0, _SRC_ROOT)
 
-from pr_sentinel.config import get_settings
+from pr_sentinel.config import load_settings
 from pr_sentinel.webhook.server import _close_bundle, build_default_deps, create_app
 
 HOST = "127.0.0.1"
@@ -60,8 +60,8 @@ async def amain() -> int:
     print("[1/8] Loading configuration from environment variables...")
 
     try:
-        settings = get_settings()
-    except Exception as exc:  # pydantic ValidationError / missing vars
+        settings = load_settings()
+    except Exception as exc:  # SettingsError: missing/invalid env vars
         print(f"FAILED: could not load settings: {exc}")
         return 1
 
