@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from pydantic import ValidationError
 
 from pr_sentinel.config import Settings
 
@@ -19,6 +20,7 @@ def _settings(language: str) -> Settings:
         {
             "telegram_bot_token": "123:TEST",
             "github_token": "gh-token",
+            "github_webhook_secret": "wh-secret",
             "openai_api_key": "key",
             "github_repo": "owner/repo",
             "telegram_chat_id": 42,
@@ -48,3 +50,22 @@ def test_unknown_language_logs_warning(caplog: pytest.LogCaptureFixture) -> None
         settings = _settings("de")
     assert settings.notification_language == "en"
     assert any("Unknown NOTIFICATION_LANGUAGE" in rec.message for rec in caplog.records)
+
+
+@pytest.mark.parametrize("secret", [None, ""])
+def test_missing_or_empty_webhook_secret_rejected(
+    secret: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``GITHUB_WEBHOOK_SECRET`` is required and non-empty (SEC-02); no token fallback."""
+    monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
+    kwargs: dict[str, object] = {
+        "telegram_bot_token": "123:TEST",
+        "github_token": "gh-token",
+        "openai_api_key": "key",
+        "github_repo": "owner/repo",
+        "telegram_chat_id": 42,
+    }
+    if secret is not None:
+        kwargs["github_webhook_secret"] = secret
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **kwargs)

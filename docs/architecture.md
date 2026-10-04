@@ -68,7 +68,7 @@ Required headers:
 | Header | Value |
 |---|---|
 | `X-GitHub-Event` | `pull_request` (anything else → `400`) |
-| `X-Hub-Signature-256` | `sha256=<hex>` — HMAC-SHA256 of the body with `GITHUB_WEBHOOK_SECRET` (falls back to `GITHUB_TOKEN` when the secret is unset; a dedicated secret is recommended) |
+| `X-Hub-Signature-256` | `sha256=<hex>` — HMAC-SHA256 of the body with the required `GITHUB_WEBHOOK_SECRET` |
 | `X-GitHub-Delivery` | delivery id, used for replay protection when `REPLAY_PROTECTION_ENABLED=true` |
 
 Body: the standard GitHub `pull_request` event JSON with `action` in
@@ -137,8 +137,8 @@ All configuration comes from environment variables (see `.env.example`):
 | Variable | Required | Purpose |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | yes | Telegram bot API token |
-| `GITHUB_TOKEN` | yes | GitHub REST API + webhook signature fallback |
-| `GITHUB_WEBHOOK_SECRET` | recommended | dedicated HMAC key for `X-Hub-Signature-256` |
+| `GITHUB_TOKEN` | yes | GitHub REST API |
+| `GITHUB_WEBHOOK_SECRET` | yes | dedicated HMAC key for `X-Hub-Signature-256` |
 | `OPENAI_API_KEY` | yes | LLM risk analysis |
 | `OPENAI_BASE_URL` | no | default `https://api.openai.com/v1` |
 | `OPENAI_MODEL` | no | default `gpt-4o` |

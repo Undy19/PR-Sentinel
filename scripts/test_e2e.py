@@ -31,7 +31,7 @@ if _SRC_ROOT not in sys.path:
     sys.path.insert(0, _SRC_ROOT)
 
 from pr_sentinel.config import get_settings
-from pr_sentinel.webhook.server import _close_bundle, _webhook_secret, build_default_deps, create_app
+from pr_sentinel.webhook.server import _close_bundle, build_default_deps, create_app
 
 HOST = "127.0.0.1"
 PORT = 8000
@@ -91,7 +91,7 @@ async def amain() -> int:
         body = json.dumps(PAYLOAD).encode("utf-8")
         headers = {
             "X-GitHub-Event": "pull_request",
-            "X-Hub-Signature-256": _sign(body, _webhook_secret(settings)),
+            "X-Hub-Signature-256": _sign(body, settings.github_webhook_secret),
             "Content-Type": "application/json",
         }
         async with httpx.AsyncClient(timeout=60.0) as client:
