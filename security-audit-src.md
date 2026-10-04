@@ -145,6 +145,7 @@ Context note (not a src/ finding): `requirements.txt` lists only `openai` and `a
   # src/bot/bot.py:24, 26-28
   self.dp.message.register(self._on_start)
 
+
   async def _on_start(self, message: Message) -> None:
       await message.answer("PR Sentinel is active.")
   ```
@@ -170,7 +171,7 @@ Context note (not a src/ finding): `requirements.txt` lists only `openai` and `a
 - **Evidence:**
   ```python
   # src/webhook/server.py:216
-  pr_body=pr.get("body") or "",
+  pr_body = (pr.get("body") or "",)
   ```
   ```python
   # src/analyzer/risk.py:65
