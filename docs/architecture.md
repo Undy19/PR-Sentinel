@@ -41,19 +41,19 @@ SQLite: pr_history row
 
 | Module | File | Responsibility |
 |---|---|---|
-| Webhook server | `src/webhook/server.py` | FastAPI app, signature verification, replay protection, work queue, background worker, GitHub REST client |
-| Risk analyzer | `src/analyzer/risk.py` | OpenAI call, JSON parsing, retry/backoff, `RiskAssessment` dataclass |
-| Expertise graph | `src/graph/expertise.py` | `git log --name-only` parsing, `commits` / `file_expertise` tables, reviewer scoring |
-| Notification composer | `src/notifications/composer.py` | MarkdownV2 message formatting with ru/en localization and escaping |
-| Bot | `src/bot/bot.py` | aiogram 3.x session lifecycle, message sending with retries |
-| Database | `src/db/database.py` | aiosqlite wrapper: `pr_history`, `seen_deliveries` |
-| Config | `src/config.py` | pydantic-settings, all values from environment variables |
-| Entry point | `src/main.py` | bot + webhook lifecycle wiring |
+| Webhook server | `src/pr_sentinel/webhook/server.py` | FastAPI app, signature verification, replay protection, work queue, background worker, GitHub REST client |
+| Risk analyzer | `src/pr_sentinel/analyzer/risk.py` | OpenAI call, JSON parsing, retry/backoff, `RiskAssessment` dataclass |
+| Expertise graph | `src/pr_sentinel/graph/expertise.py` | `git log --name-only` parsing, `commits` / `file_expertise` tables, reviewer scoring |
+| Notification composer | `src/pr_sentinel/notifications/composer.py` | MarkdownV2 message formatting with ru/en localization and escaping |
+| Bot | `src/pr_sentinel/bot/bot.py` | aiogram 3.x session lifecycle, message sending with retries |
+| Database | `src/pr_sentinel/db/database.py` | aiosqlite wrapper: `pr_history`, `seen_deliveries` |
+| Config | `src/pr_sentinel/config.py` | pydantic-settings, all values from environment variables |
+| Entry point | `src/pr_sentinel/main.py` | bot + webhook lifecycle wiring |
 
 ## HTTP API
 
 The web server exposes exactly two endpoints (port from the process; run with
-`uvicorn src.webhook.server:app` or via `python src/main.py`):
+`uvicorn pr_sentinel.webhook.server:app` or via `python -m pr_sentinel.main`):
 
 ### `GET /health`
 
@@ -91,7 +91,7 @@ Responses:
 One database file (`DATABASE_PATH`, default `pr_sentinel.db`), four tables:
 
 ```sql
--- reviewed PRs (src/db/database.py)
+-- reviewed PRs (src/pr_sentinel/db/database.py)
 CREATE TABLE pr_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     pr_number INTEGER,
@@ -101,13 +101,13 @@ CREATE TABLE pr_history (
     timestamp TEXT            -- UTC ISO-8601
 );
 
--- webhook replay protection, 24 h retention (src/db/database.py)
+-- webhook replay protection, 24 h retention (src/pr_sentinel/db/database.py)
 CREATE TABLE seen_deliveries (
     delivery_id TEXT PRIMARY KEY,
     seen_at TEXT              -- UTC ISO-8601
 );
 
--- raw git history (src/graph/expertise.py)
+-- raw git history (src/pr_sentinel/graph/expertise.py)
 CREATE TABLE commits (
     sha TEXT PRIMARY KEY,
     author TEXT NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE commits (
     timestamp TEXT NOT NULL       -- UTC ISO-8601
 );
 
--- aggregated expertise (src/graph/expertise.py)
+-- aggregated expertise (src/pr_sentinel/graph/expertise.py)
 CREATE TABLE file_expertise (
     author_login TEXT NOT NULL,
     file_path TEXT NOT NULL,
@@ -154,5 +154,5 @@ All configuration comes from environment variables (see `.env.example`):
 - Async-first: aiogram 3.x, FastAPI, aiosqlite, httpx; one shared service
   bundle (`WebhookDeps`) injected via FastAPI dependencies.
 - The LLM is the only non-deterministic stage; it is isolated in
-  `src/analyzer/risk.py` with bounded retries, timeout, and a fallback
+  `src/pr_sentinel/analyzer/risk.py` with bounded retries, timeout, and a fallback
   result so the notification pipeline never blocks on it.

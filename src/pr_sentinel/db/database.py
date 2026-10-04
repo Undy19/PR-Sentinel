@@ -99,7 +99,7 @@ class Database:
         now = datetime.now(UTC)
         cutoff = now - timedelta(hours=24)
         await conn.execute(
-            "INSERT OR IGNORE INTO seen_deliveries (delivery_id, seen_at) " "VALUES (?, ?)",
+            "INSERT OR IGNORE INTO seen_deliveries (delivery_id, seen_at) VALUES (?, ?)",
             (delivery_id, now.isoformat()),
         )
         await conn.execute(

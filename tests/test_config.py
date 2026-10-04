@@ -11,7 +11,7 @@ import logging
 
 import pytest
 
-from src.config import Settings
+from pr_sentinel.config import Settings
 
 
 def _settings(language: str) -> Settings:
@@ -44,7 +44,7 @@ def test_notification_language_normalization(raw: str, expected: str) -> None:
 
 
 def test_unknown_language_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.WARNING, logger="src.config"):
+    with caplog.at_level(logging.WARNING, logger="pr_sentinel.config"):
         settings = _settings("de")
     assert settings.notification_language == "en"
     assert any("Unknown NOTIFICATION_LANGUAGE" in rec.message for rec in caplog.records)

@@ -50,7 +50,7 @@ Risk Analyzer              Expertise Graph Builder
 
 ## Key Directories
 
-- `src/` — main application code (bot, webhook server, risk analyzer, expertise graph, notifications, db)
+- `src/pr_sentinel/` — main application code (bot, webhook server, risk analyzer, expertise graph, notifications, db)
 - `tests/` — unit and integration tests (all external APIs mocked)
 - `scripts/` — development scripts (local E2E, Telegram send test)
 - `docs/` — architecture and API documentation (`docs/architecture.md`)
@@ -62,10 +62,10 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 | Operation | Command (planned) |
 |-----------|-------------------|
 | Install dependencies | `pip install -r requirements.txt` or `pip install -e .` |
-| Run bot (dev) | `python src/bot.py` |
-| Run webhook server | `uvicorn src.webhook:app` |
+| Run bot (dev) | `python -m pr_sentinel.main` |
+| Run webhook server | `uvicorn pr_sentinel.webhook.server:app` |
 | Run tests | `pytest` |
-| Run tests with coverage | `pytest --cov=src --cov-fail-under=60` |
+| Run tests with coverage | `pytest --cov=pr_sentinel --cov-fail-under=60` |
 | Format code | `ruff format src/ tests/` |
 | Lint code | `ruff check src/ tests/` |
 | Type check | `mypy src/` |

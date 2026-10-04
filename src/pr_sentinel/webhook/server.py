@@ -1,6 +1,6 @@
 """FastAPI webhook server for GitHub ``pull_request`` events.
 
-The module exposes a ready-to-run ``app`` (``uvicorn src.webhook.server:app``)
+The module exposes a ready-to-run ``app`` (``uvicorn pr_sentinel.webhook.server:app``)
 built by :func:`create_app`. Services are injected via :class:`WebhookDeps`
 and stored on ``app.state``. Accepted webhooks are placed on a bounded
 ``app.state.queue`` consumed by a single background worker task
@@ -26,12 +26,12 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from src.analyzer.risk import analyze_pr
-from src.bot.bot import PRBot
-from src.config import Settings, get_settings
-from src.db.database import Database
-from src.graph.expertise import ExpertiseGraph
-from src.notifications.composer import NotificationComposer
+from pr_sentinel.analyzer.risk import analyze_pr
+from pr_sentinel.bot.bot import PRBot
+from pr_sentinel.config import Settings, get_settings
+from pr_sentinel.db.database import Database
+from pr_sentinel.graph.expertise import ExpertiseGraph
+from pr_sentinel.notifications.composer import NotificationComposer
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ def create_github_client(token: str) -> httpx.AsyncClient:
 async def build_default_deps(settings: Settings) -> WebhookDeps:
     """Construct the full service bundle from settings.
 
-    Used when the app runs standalone (``uvicorn src.webhook.server:app``)
+    Used when the app runs standalone (``uvicorn pr_sentinel.webhook.server:app``)
     and no pre-built deps were injected.
     """
     db = Database(settings.database_path)
@@ -208,7 +208,7 @@ def create_app(deps: WebhookDeps | None = None) -> FastAPI:
 
     Args:
         deps: Pre-built service bundle (dependency injection for tests and
-            for :mod:`src.main`, which owns the bot lifecycle). When omitted,
+            for :mod:`pr_sentinel.main`, which owns the bot lifecycle). When omitted,
             the bundle is built from environment settings at startup.
     """
 

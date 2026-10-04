@@ -63,7 +63,7 @@
   # scripts/test_e2e.py:92-96
   headers = {
       "X-GitHub-Event": "pull_request",
-      "X-Hub-Signature-256": _sign(body, settings.github_token),   # ← old key
+      "X-Hub-Signature-256": _sign(body, settings.github_token),  # ← old key
       "Content-Type": "application/json",
   }
   ```

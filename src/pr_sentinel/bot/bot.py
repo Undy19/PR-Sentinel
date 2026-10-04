@@ -42,7 +42,7 @@ class PRBot:
     async def start(self) -> None:
         """Start polling (blocks until :meth:`stop` is called).
 
-        Signal handling is owned by :mod:`src.main`, so the dispatcher's
+        Signal handling is owned by :mod:`pr_sentinel.main`, so the dispatcher's
         built-in signal handlers are disabled to avoid double handling.
         """
         # Delete any existing webhook to avoid conflict with polling
@@ -88,7 +88,7 @@ class PRBot:
                     raise
                 delay = attempt
                 logger.warning(
-                    "Telegram send to chat %s failed (attempt %d/%d): %s; " "retrying in %ds",
+                    "Telegram send to chat %s failed (attempt %d/%d): %s; retrying in %ds",
                     chat_id,
                     attempt,
                     _SEND_MAX_ATTEMPTS,

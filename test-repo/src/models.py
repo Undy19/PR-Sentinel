@@ -1,8 +1,10 @@
 """Data models."""
 
+
 class User:
     def __init__(self, name):
         self.name = name
+
 
 class Item:
     def __init__(self, title):
@@ -26,8 +28,10 @@ class Item:
         new = Item(self.title)
         return new
 
+
 class Relationship:
     """Model relationship definition."""
+
     def __init__(self, source, target, type):
         self.source = source
         self.target = target
@@ -42,11 +46,15 @@ class Relationship:
         self.created_at = created_at
         self.updated_at = updated_at
 
+
 class ModelVersion:
     """Track model schema versions."""
+
     CURRENT = 1
+
     def __init__(self, version=CURRENT):
         self.version = version
+
 
 def create_user(data):
     """Factory function to create a User instance."""
@@ -56,13 +64,16 @@ def create_user(data):
         """Return a cached representation of the model."""
         return self._cache if hasattr(self, "_cache") else self.to_dict()
 
+
 def validate_model(obj, fields):
     """Validate model instance has required fields."""
     missing = [f for f in fields if not hasattr(obj, f)]
     return len(missing) == 0
 
+
 class ModelEvent:
     """Event emitted when a model changes."""
+
     def __init__(self, model, action):
         self.model = model
         self.action = action  # "created", "updated", "deleted"
@@ -75,4 +86,5 @@ class ModelEvent:
     def export_json(self):
         """Export model as JSON string."""
         import json
+
         return json.dumps(self.to_dict())

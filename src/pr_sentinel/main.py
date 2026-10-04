@@ -5,10 +5,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Ensure project root is on sys.path
-_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# Ensure src/ is on sys.path so the pr_sentinel package is importable
+# without installation
+_SRC_ROOT = str(Path(__file__).resolve().parent.parent)
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
 
 import asyncio
 import logging
@@ -19,12 +20,12 @@ from types import FrameType
 
 import uvicorn
 
-from src.bot.bot import PRBot
-from src.config import get_settings
-from src.db.database import Database
-from src.graph.expertise import ExpertiseGraph
-from src.notifications.composer import NotificationComposer
-from src.webhook.server import WebhookDeps, create_app, create_github_client
+from pr_sentinel.bot.bot import PRBot
+from pr_sentinel.config import get_settings
+from pr_sentinel.db.database import Database
+from pr_sentinel.graph.expertise import ExpertiseGraph
+from pr_sentinel.notifications.composer import NotificationComposer
+from pr_sentinel.webhook.server import WebhookDeps, create_app, create_github_client
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +68,7 @@ async def main() -> None:
         logger.info("expertise graph built from %s", repo_path)
     except Exception:
         logger.exception(
-            "failed to build expertise graph from %s; "
-            "continuing without reviewer recommendations",
+            "failed to build expertise graph from %s; continuing without reviewer recommendations",
             repo_path,
         )
 

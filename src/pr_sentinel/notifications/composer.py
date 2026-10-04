@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from src.analyzer.risk import RiskAssessment
-from src.graph.expertise import Reviewer
+from pr_sentinel.analyzer.risk import RiskAssessment
+from pr_sentinel.graph.expertise import Reviewer
 
 # Characters Telegram MarkdownV2 requires to be escaped in plain text.
 _MD_V2_SPECIALS = frozenset(r"_*[]()~`>#+-=|{}.!")
@@ -48,7 +48,7 @@ class NotificationComposer:
     }
 
     # Localized risk-level labels; ``MEDIUM`` is an alias for ``MED``
-    # (the level value used by :mod:`src.analyzer.risk`).
+    # (the level value used by :mod:`pr_sentinel.analyzer.risk`).
     _LEVEL_LABELS: ClassVar[dict[str, dict[str, str]]] = {
         "ru": {
             "LOW": "Низкий",

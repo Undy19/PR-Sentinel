@@ -1,4 +1,4 @@
-"""Unit tests for src.analyzer.risk (LLM-based PR risk scoring)."""
+"""Unit tests for pr_sentinel.analyzer.risk (LLM-based PR risk scoring)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import openai
 
-from src.analyzer.risk import RiskAssessment, analyze_pr
+from pr_sentinel.analyzer.risk import RiskAssessment, analyze_pr
 
 VALID_JSON = json.dumps({"level": "LOW", "reasons": ["Minor change"], "confidence": 0.9})
 
@@ -77,7 +77,7 @@ async def test_analyze_pr_rate_limit_retry() -> None:
         _success_response(VALID_JSON),
     ]
 
-    with patch("src.analyzer.risk.asyncio.sleep", new=AsyncMock()) as sleep:
+    with patch("pr_sentinel.analyzer.risk.asyncio.sleep", new=AsyncMock()) as sleep:
         result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result == RiskAssessment(level="LOW", reasons=["Minor change"], confidence=0.9)
@@ -89,7 +89,7 @@ async def test_analyze_pr_rate_limit_exhausted() -> None:
     client = _mock_client()
     client.chat.completions.create.side_effect = _rate_limit_error()
 
-    with patch("src.analyzer.risk.asyncio.sleep", new=AsyncMock()) as sleep:
+    with patch("pr_sentinel.analyzer.risk.asyncio.sleep", new=AsyncMock()) as sleep:
         result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result.level == "HIGH"
@@ -103,7 +103,7 @@ async def test_analyze_pr_timeout() -> None:
     client = _mock_client()
     client.chat.completions.create.side_effect = TimeoutError()
 
-    with patch("src.analyzer.risk.asyncio.sleep", new=AsyncMock()):
+    with patch("pr_sentinel.analyzer.risk.asyncio.sleep", new=AsyncMock()):
         result = await analyze_pr("diff", "PR title", "PR body", client=client)
 
     assert result.level == "HIGH"

@@ -17,11 +17,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Project root is the parent of this scripts/ directory. Ensure it is
-# importable when run as ``python scripts/test_graph_only.py``.
+# The package lives in src/. Ensure it is importable when run as
+# ``python scripts/test_graph_only.py``.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+_SRC_ROOT = str(Path(PROJECT_ROOT) / "src")
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
 
 REPO_PATH = PROJECT_ROOT / "test-repo"
 
@@ -29,7 +30,7 @@ TARGET_FILES = ["src/main.py", "src/utils.py"]
 
 
 async def amain() -> int:
-    from src.graph.expertise import ExpertiseGraph
+    from pr_sentinel.graph.expertise import ExpertiseGraph
 
     print("[1/4] Creating ExpertiseGraph with a temporary database...")
     tmp = tempfile.NamedTemporaryFile(prefix="expertise_", suffix=".db", delete=False)

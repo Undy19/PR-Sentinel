@@ -3,7 +3,7 @@
 Starts the FastAPI webhook server in-process on ``127.0.0.1:8000`` (via
 uvicorn), posts a simulated GitHub ``pull_request`` webhook, and reports the
 result. Configuration is read from environment variables, exactly like
-:mod:`src.config`.
+:mod:`pr_sentinel.config`.
 
 Run from the project root::
 
@@ -24,14 +24,14 @@ from pathlib import Path
 import httpx
 import uvicorn
 
-# Project root is the parent of this scripts/ directory. Ensure it is
-# importable when run as ``python scripts/test_e2e.py``.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+# The package lives in src/. Ensure it is importable when run as
+# ``python scripts/test_e2e.py``.
+_SRC_ROOT = str(Path(__file__).resolve().parent.parent / "src")
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
 
-from src.config import get_settings
-from src.webhook.server import _close_bundle, _webhook_secret, build_default_deps, create_app
+from pr_sentinel.config import get_settings
+from pr_sentinel.webhook.server import _close_bundle, _webhook_secret, build_default_deps, create_app
 
 HOST = "127.0.0.1"
 PORT = 8000

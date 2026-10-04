@@ -24,8 +24,10 @@ import sys
 from pathlib import Path
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# The package lives in src/. Ensure it is importable when run as a script.
+_SRC_ROOT = str(Path(_PROJECT_ROOT) / "src")
+if _SRC_ROOT not in sys.path:
+    sys.path.insert(0, _SRC_ROOT)
 
 import asyncio
 import json
@@ -35,9 +37,9 @@ import tempfile
 import aiohttp
 import openai
 
-from src.analyzer.risk import RiskAssessment, analyze_pr
-from src.graph.expertise import ExpertiseGraph
-from src.notifications.composer import NotificationComposer
+from pr_sentinel.analyzer.risk import RiskAssessment, analyze_pr
+from pr_sentinel.graph.expertise import ExpertiseGraph
+from pr_sentinel.notifications.composer import NotificationComposer
 
 ENV_PATH = Path(_PROJECT_ROOT) / ".env"
 REPO_PATH = Path(_PROJECT_ROOT) / "test-repo"
@@ -113,6 +115,7 @@ def files_from_diff(diff: str) -> list[str]:
                     files.append(path)
     return files
 
+
 async def discover_model(base_url: str) -> str | None:
     """Return the first model id served at ``{base_url}/models`` (else None)."""
     try:
@@ -134,11 +137,10 @@ async def discover_model(base_url: str) -> str | None:
 
     return None
 
+
 def fallback_assessment() -> RiskAssessment:
     """Heuristic assessment used when the LLM is unreachable."""
-    return RiskAssessment(
-        level="LOW", reasons=["LLM unavailable, using heuristic"], confidence=0.0
-    )
+    return RiskAssessment(level="LOW", reasons=["LLM unavailable, using heuristic"], confidence=0.0)
 
 
 async def amain() -> int:
@@ -176,8 +178,7 @@ async def amain() -> int:
         if not model and base_url:
             model = await discover_model(base_url)
             if model:
-                print(f"      no OPENAI_MODEL in .env; discovered '{model}' "
-                      f"from {base_url}/models")
+                print(f"      no OPENAI_MODEL in .env; discovered '{model}' from {base_url}/models")
         model = model or "gpt-4o"
         client: openai.AsyncOpenAI | None = None
         if env.get("OPENAI_API_KEY"):
@@ -207,13 +208,14 @@ async def amain() -> int:
         diff_files = files_from_diff(SAMPLE_DIFF)
         reviewers = await graph.recommend_reviewers(diff_files)
         if not reviewers:
-            print(f"      no expertise matches for {diff_files}; "
-                  f"falling back to {FALLBACK_FILES}")
+            print(f"      no expertise matches for {diff_files}; falling back to {FALLBACK_FILES}")
             reviewers = await graph.recommend_reviewers(FALLBACK_FILES)
         if reviewers:
             for i, r in enumerate(reviewers, 1):
-                print(f"      {i}. @{r.login} ({r.name}) "
-                      f"files_touched={r.files_touched} score={r.expertise_score}")
+                print(
+                    f"      {i}. @{r.login} ({r.name}) "
+                    f"files_touched={r.files_touched} score={r.expertise_score}"
+                )
         else:
             print("      (no reviewers found)")
     finally:
@@ -227,9 +229,7 @@ async def amain() -> int:
     print("Step 4: Composing Telegram notification...")
     composer = NotificationComposer()
     pr_url = f"https://github.com/{repo}/pull/{PR_NUMBER}"
-    message = composer.compose(
-        pr_title=PR_TITLE, pr_url=pr_url, risk=risk, reviewers=reviewers
-    )
+    message = composer.compose(pr_title=PR_TITLE, pr_url=pr_url, risk=risk, reviewers=reviewers)
     print("      message:")
     for line in message.splitlines():
         print(f"        {line}")

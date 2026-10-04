@@ -41,7 +41,7 @@ class Settings(BaseSettings):
         lang = value.strip().lower()
         if lang not in _VALID_LANGUAGES:
             logger.warning(
-                "Unknown NOTIFICATION_LANGUAGE %r; falling back to 'en' " "(supported: ru, en)",
+                "Unknown NOTIFICATION_LANGUAGE %r; falling back to 'en' (supported: ru, en)",
                 value,
             )
             return "en"
@@ -55,7 +55,7 @@ settings: Settings  # lazily constructed; resolved via __getattr__ / get_setting
 def get_settings() -> Settings:
     """Return the process-wide settings instance, built on first use.
 
-    Lazy construction keeps ``import src.config`` side-effect free, so
+    Lazy construction keeps ``import pr_sentinel.config`` side-effect free, so
     modules that only need the :class:`Settings` type (e.g. the webhook
     server under test) import cleanly without environment variables set.
     """
@@ -66,7 +66,7 @@ def get_settings() -> Settings:
 
 
 def __getattr__(name: str) -> object:
-    """PEP 562 hook: ``from src.config import settings`` resolves lazily."""
+    """PEP 562 hook: ``from pr_sentinel.config import settings`` resolves lazily."""
     if name == "settings":
         return get_settings()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

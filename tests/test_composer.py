@@ -1,10 +1,10 @@
-"""Unit tests for src.notifications.composer (Telegram MarkdownV2 formatting)."""
+"""Unit tests for pr_sentinel.notifications.composer (Telegram MarkdownV2 formatting)."""
 
 from __future__ import annotations
 
-from src.analyzer.risk import RiskAssessment
-from src.graph.expertise import Reviewer
-from src.notifications.composer import NotificationComposer
+from pr_sentinel.analyzer.risk import RiskAssessment
+from pr_sentinel.graph.expertise import Reviewer
+from pr_sentinel.notifications.composer import NotificationComposer
 
 
 def _two_reviewers() -> list[Reviewer]:
@@ -79,5 +79,5 @@ def test_compose_special_chars() -> None:
 
     # MarkdownV2 specials in the title must be backslash-escaped.
     assert "test \\[feature\\] \\(v1\\.0\\)" in out
-    # "MED" is the level value used by src.analyzer.risk; it must map to a label.
+    # "MED" is the level value used by pr_sentinel.analyzer.risk; it must map to a label.
     assert "📊 Risk: 🟡 Medium" in out
