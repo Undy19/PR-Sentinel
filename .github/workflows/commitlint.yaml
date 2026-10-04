@@ -32,5 +32,5 @@ jobs:
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }}
 
       - name: Lint commit messages (push)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         run: npx commitlint --from ${{ github.event.before }}
