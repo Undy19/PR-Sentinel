@@ -11,12 +11,12 @@ _VALID_LANGUAGES = frozenset({"ru", "en"})
 
 
 class Settings(BaseSettings):
-    telegram_bot_token: str
-    github_token: str
+    telegram_bot_token: str = Field(..., min_length=1)
+    github_token: str = Field(..., min_length=1)
     github_webhook_secret: str = Field(
         ..., min_length=1
     )  # dedicated HMAC key for X-Hub-Signature-256 (SEC-02)
-    openai_api_key: str
+    openai_api_key: str = Field(..., min_length=1)
     openai_base_url: str | None = None
     openai_model: str = "gpt-4o"
     database_path: str = "pr_sentinel.db"
@@ -46,6 +46,20 @@ class Settings(BaseSettings):
             )
             return "en"
         return lang
+
+    @field_validator("github_repo")
+    @classmethod
+    def _validate_repo_format(cls, value: str) -> str:
+        """Enforce the ``owner/repo`` format at startup, not on the first API call.
+
+        Normalizes surrounding/inner whitespace (``" myorg / myrepo "`` →
+        ``"myorg/myrepo"``) so typos in ``.env`` fail fast with a readable
+        message instead of 404-ing every GitHub request.
+        """
+        parts = [part.strip() for part in value.split("/")]
+        if len(parts) != 2 or not all(parts):
+            raise ValueError("expected 'owner/repo' format (e.g. 'myorg/myrepo')")
+        return "/".join(parts)
 
 
 _settings: Settings | None = None

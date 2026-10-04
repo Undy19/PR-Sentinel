@@ -1,7 +1,7 @@
-"""Tests for :class:`Settings` language normalization (unknown-language guard).
+"""Tests for :class:`Settings` validation and language normalization.
 
-The guard normalizes ``NOTIFICATION_LANGUAGE`` at the source so the LLM
-``reasons`` language (analyzer) and the notification template language
+The language guard normalizes ``NOTIFICATION_LANGUAGE`` at the source so the
+LLM ``reasons`` language (analyzer) and the notification template language
 (composer) always agree, instead of diverging on an unknown code.
 """
 
@@ -27,6 +27,24 @@ def _settings(language: str) -> Settings:
             "notification_language": language,
         }
     )
+
+
+def _settings_kwargs(**overrides: object) -> dict[str, object]:
+    """A valid settings mapping; override any key, pass ``None`` to delete it."""
+    kwargs: dict[str, object] = {
+        "telegram_bot_token": "123:TEST",
+        "github_token": "gh-token",
+        "github_webhook_secret": "wh-secret",
+        "openai_api_key": "key",
+        "github_repo": "owner/repo",
+        "telegram_chat_id": 42,
+    }
+    for key, value in overrides.items():
+        if value is None:
+            del kwargs[key]
+        else:
+            kwargs[key] = value
+    return kwargs
 
 
 @pytest.mark.parametrize(
@@ -58,14 +76,40 @@ def test_missing_or_empty_webhook_secret_rejected(
 ) -> None:
     """``GITHUB_WEBHOOK_SECRET`` is required and non-empty (SEC-02); no token fallback."""
     monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
-    kwargs: dict[str, object] = {
-        "telegram_bot_token": "123:TEST",
-        "github_token": "gh-token",
-        "openai_api_key": "key",
-        "github_repo": "owner/repo",
-        "telegram_chat_id": 42,
-    }
-    if secret is not None:
-        kwargs["github_webhook_secret"] = secret
     with pytest.raises(ValidationError):
-        Settings(_env_file=None, **kwargs)
+        Settings(_env_file=None, **_settings_kwargs(github_webhook_secret=secret))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("telegram_bot_token", None),
+        ("telegram_bot_token", ""),
+        ("github_token", None),
+        ("github_token", ""),
+        ("openai_api_key", None),
+        ("openai_api_key", ""),
+    ],
+)
+def test_missing_or_empty_secret_rejected(
+    field: str, value: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """All required secrets must be present and non-empty."""
+    monkeypatch.delenv(field.upper(), raising=False)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **_settings_kwargs(**{field: value}))
+
+
+@pytest.mark.parametrize(
+    "repo",
+    ["not-a-repo", "a/b/c", "owner/", "/repo", "   "],
+)
+def test_invalid_repo_format_rejected(repo: str) -> None:
+    """``GITHUB_REPO`` must be ``owner/repo``; typos fail at startup."""
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **_settings_kwargs(github_repo=repo))
+
+
+def test_repo_format_normalized() -> None:
+    settings = Settings(_env_file=None, **_settings_kwargs(github_repo="  myorg / myrepo  "))
+    assert settings.github_repo == "myorg/myrepo"
