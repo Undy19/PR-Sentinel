@@ -84,6 +84,7 @@ def _fallback_reason(kind: str, language: str) -> str:
     """Localized user-facing reason for a failed analysis path."""
     return FALLBACK_REASONS[kind].get(language, FALLBACK_REASONS[kind]["en"])
 
+
 RiskLevel = Literal["LOW", "MED", "HIGH", "CRITICAL"]
 _VALID_LEVELS = frozenset({"LOW", "MED", "HIGH", "CRITICAL"})
 
@@ -127,16 +128,22 @@ def _parse_assessment(raw: str, language: str = "en") -> RiskAssessment:
         data = json.loads(text)
     except ValueError:
         logger.warning("Malformed JSON in LLM response: %.200s", raw)
-        return RiskAssessment(level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0)
+        return RiskAssessment(
+            level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0
+        )
 
     if not isinstance(data, dict):
         logger.warning("LLM response is not a JSON object: %.200s", raw)
-        return RiskAssessment(level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0)
+        return RiskAssessment(
+            level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0
+        )
 
     level = data.get("level")
     if not isinstance(level, str) or level.strip().upper() not in _VALID_LEVELS:
         logger.warning("Invalid risk level in LLM response: %r", level)
-        return RiskAssessment(level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0)
+        return RiskAssessment(
+            level="HIGH", reasons=[_fallback_reason("parse_error", language)], confidence=0.0
+        )
     level = cast(RiskLevel, level.strip().upper())
 
     raw_reasons = data.get("reasons")
@@ -236,7 +243,11 @@ async def analyze_pr(
             backoff = min(backoff * 2, MAX_BACKOFF)
         except openai.OpenAIError as exc:
             logger.warning("OpenAI API error (not retried): %s", exc)
-            return RiskAssessment(level="HIGH", reasons=[_fallback_reason("api_error", language)], confidence=0.0)
+            return RiskAssessment(
+                level="HIGH", reasons=[_fallback_reason("api_error", language)], confidence=0.0
+            )
 
     # Unreachable: every path above returns, but keeps static analysis happy.
-    return RiskAssessment(level="HIGH", reasons=[_fallback_reason("failed", language)], confidence=0.0)
+    return RiskAssessment(
+        level="HIGH", reasons=[_fallback_reason("failed", language)], confidence=0.0
+    )

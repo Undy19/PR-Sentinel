@@ -297,7 +297,7 @@ class ExpertiseGraph:
         """Best-known display name for a login (from their latest commit)."""
         conn = self._require_conn()
         cursor = await conn.execute(
-            "SELECT author FROM commits WHERE author_login = ? " "ORDER BY timestamp DESC LIMIT 1",
+            "SELECT author FROM commits WHERE author_login = ? ORDER BY timestamp DESC LIMIT 1",
             (login,),
         )
         row = await cursor.fetchone()

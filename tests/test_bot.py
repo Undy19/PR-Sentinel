@@ -1,10 +1,10 @@
-"""Unit tests for src.bot.bot (Telegram bot wrapper)."""
+"""Unit tests for pr_sentinel.bot.bot (Telegram bot wrapper)."""
 
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from src.bot.bot import PRBot
+from pr_sentinel.bot.bot import PRBot
 
 
 def test_prbot_instantiation() -> None:

@@ -14,13 +14,13 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
-from src.analyzer.risk import RiskAssessment
-from src.bot.bot import PRBot
-from src.config import Settings
-from src.db.database import Database
-from src.graph.expertise import ExpertiseGraph
-from src.notifications.composer import NotificationComposer
-from src.webhook.server import (
+from pr_sentinel.analyzer.risk import RiskAssessment
+from pr_sentinel.bot.bot import PRBot
+from pr_sentinel.config import Settings
+from pr_sentinel.db.database import Database
+from pr_sentinel.graph.expertise import ExpertiseGraph
+from pr_sentinel.notifications.composer import NotificationComposer
+from pr_sentinel.webhook.server import (
     MAX_BODY_BYTES,
     WebhookDeps,
     WorkItem,
@@ -210,7 +210,9 @@ async def test_webhook_valid_pull_request(webhook_env: Env) -> None:
     }
 
     risk = RiskAssessment(level="MED", reasons=["Touches core config path"], confidence=0.7)
-    with patch("src.webhook.server.analyze_pr", new=AsyncMock(return_value=risk)) as analyze:
+    with patch(
+        "pr_sentinel.webhook.server.analyze_pr", new=AsyncMock(return_value=risk)
+    ) as analyze:
         response = await client.post("/webhook/github", content=body, headers=headers)
 
         # The handler acknowledges and enqueues; the worker does the pipeline.
@@ -305,7 +307,7 @@ async def test_webhook_duplicate_delivery(webhook_env: Env) -> None:
     }
 
     risk = RiskAssessment(level="MED", reasons=["Touches core config path"], confidence=0.7)
-    with patch("src.webhook.server.analyze_pr", new=AsyncMock(return_value=risk)):
+    with patch("pr_sentinel.webhook.server.analyze_pr", new=AsyncMock(return_value=risk)):
         first = await client.post("/webhook/github", content=body, headers=headers)
         second = await client.post("/webhook/github", content=body, headers=headers)
 

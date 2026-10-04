@@ -1,4 +1,4 @@
-"""Unit tests for src.graph.expertise (git-history expertise graph)."""
+"""Unit tests for pr_sentinel.graph.expertise (git-history expertise graph)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from src.graph.expertise import ExpertiseGraph
+from pr_sentinel.graph.expertise import ExpertiseGraph
 
 _ALICE = {
     "GIT_AUTHOR_NAME": "Alice",

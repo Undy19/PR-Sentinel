@@ -1,4 +1,4 @@
-"""Unit/integration tests for src.db.database (SQLite PR history)."""
+"""Unit/integration tests for pr_sentinel.db.database (SQLite PR history)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.db.database import Database
+from pr_sentinel.db.database import Database
 
 
 @pytest.fixture

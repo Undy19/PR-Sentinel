@@ -64,7 +64,7 @@ pytest
 **Run with the coverage gate (60% minimum):**
 
 ```bash
-pytest --cov=src --cov-fail-under=60
+pytest --cov=pr_sentinel --cov-fail-under=60
 ```
 
 - Async tests run in `pytest-asyncio` auto mode — no `@pytest.mark.asyncio` decorators needed.
@@ -135,7 +135,7 @@ setting up a fresh fork, recreate it with these steps:
    - Leave everything else off: *Restrict creations/updates/deletions*, *Require
      deployments to succeed*, *Require signed commits*, *Require code scanning results*,
      *Require code quality results*, *Restrict code coverage* (coverage is already
-     gated in CI via `pytest --cov=src --cov-fail-under=60`), and the Copilot options
+     gated in CI via `pytest --cov=pr_sentinel --cov-fail-under=60`), and the Copilot options
      (preview features that consume quota).
 5. Leave **Custom bypass** at its default: administrators.
 6. In the **Enforcement** section, keep **This ruleset would be enforced** selected.
