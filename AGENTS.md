@@ -50,11 +50,10 @@ Risk Analyzer              Expertise Graph Builder
 
 ## Key Directories
 
-No source directories exist yet. Planned structure (inferred from spec):
-- `src/` — main application code (bot, webhook server, analyzer, graph builder)
-- `tests/` — unit and integration tests
-- `scripts/` — development and deployment scripts
-- `docs/` — documentation
+- `src/` — main application code (bot, webhook server, risk analyzer, expertise graph, notifications, db)
+- `tests/` — unit and integration tests (all external APIs mocked)
+- `scripts/` — development scripts (local E2E, Telegram send test)
+- `docs/` — architecture and API documentation (`docs/architecture.md`)
 
 ## Development Commands
 
@@ -67,7 +66,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 | Run webhook server | `uvicorn src.webhook:app` |
 | Run tests | `pytest` |
 | Run tests with coverage | `pytest --cov=src --cov-fail-under=60` |
-| Format code | `black src/ tests/` |
+| Format code | `ruff format src/ tests/` |
 | Lint code | `ruff check src/ tests/` |
 | Type check | `mypy src/` |
 | Build Docker image | `docker build -t pr-sentinel .` |
@@ -118,6 +117,10 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 | `CONTRIBUTING.md` | Contributor guide (setup, style, testing, commits, PRs) |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR template |
 | `.github/workflows/commitlint.yaml` | Commit message CI check (commitlint) |
+| `LICENSE` | MIT license |
+| `CHANGELOG.md` | Release history (Keep a Changelog) |
+| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 |
+| `docs/architecture.md` | Architecture, HTTP API, data model, configuration |
 
 ## Runtime/Tooling Preferences
 
@@ -126,7 +129,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - **Runtime:** Standard CPython; no Bun/Node/Deno
 - **Database:** SQLite (stdlib, no external server)
 - **Deployment:** Docker container
-- **CI/CD:** Configured — GitHub Actions workflow at `.github/workflows/ci.yaml` (ruff, black, mypy, pytest with 60% coverage gate)
+- **CI/CD:** Configured — GitHub Actions workflow at `.github/workflows/ci.yaml` (ruff lint + format, mypy, pytest with 60% coverage gate)
 - **External APIs:** GitHub API (via PyGithub), OpenAI API
 
 ## Testing & QA

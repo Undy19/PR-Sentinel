@@ -18,7 +18,7 @@ pip install -e ".[dev]"
 ```
 
 This installs the project in editable mode along with all development dependencies (pytest,
-ruff, black, mypy, etc.).
+ruff, mypy, etc.).
 
 **Environment variables:**
 
@@ -39,17 +39,17 @@ Required variables:
 
 We enforce consistent formatting and type safety on every commit:
 
-| Tool  | Command                 | Purpose                          |
-| ----- | ----------------------- | -------------------------------- |
-| Black | `black src/ tests/`     | Auto-formatting (line-length 100) |
-| Ruff  | `ruff check src/ tests/` | Linting                          |
-| Mypy  | `mypy src/`             | Static type checking (strict)    |
+| Tool        | Command                   | Purpose                         |
+| ----------- | ------------------------- | ------------------------------- |
+| Ruff        | `ruff check src/ tests/`  | Linting                         |
+| Ruff format | `ruff format src/ tests/` | Auto-formatting (line-length 100) |
+| Mypy        | `mypy src/`               | Static type checking (strict)   |
 
 Run all three before submitting a PR:
 
 ```bash
-black src/ tests/
 ruff check src/ tests/
+ruff format src/ tests/
 mypy src/
 ```
 
@@ -102,7 +102,7 @@ Non-conforming commits will fail CI.
 2. **Keep PRs small and focused** — one logical change per PR.
 3. **CI must be green** before requesting review. The required checks are:
    - `ruff` — linting
-   - `black` — formatting
+   - `ruff format` — formatting
    - `mypy` — type checking
    - `tests` — pytest with 60% coverage gate
    - `commitlint` — commit message format
