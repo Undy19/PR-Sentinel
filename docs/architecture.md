@@ -147,6 +147,9 @@ All configuration comes from environment variables (see `.env.example`):
 | `TELEGRAM_CHAT_ID` | yes | destination chat for notifications |
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
 | `REPLAY_PROTECTION_ENABLED` | no | default `true` |
+| `REPO_PATH` | no | default `.` — git repo path for the expertise graph |
+| `HOST` | no | default `0.0.0.0` — webhook server bind host |
+| `PORT` | no | default `8000` — webhook server port |
 
 ## Design constraints
 
