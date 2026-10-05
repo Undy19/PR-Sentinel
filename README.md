@@ -31,7 +31,7 @@ graph TD
     B -->|Queue: up to 100 tasks| C["Background async pipeline"]
 
     C --> D["Risk analyzer<br/>(OpenAI API + backoff on 429)"]
-    C --> E[("SQLite database<br/>(expertise graph + pr_history)")]
+    C --> E[("SQLite database<br/>(expertise graph from git history + pr_history)")]
 
     D --> F["Notification composer<br/>(ru/en localization)"]
     E --> F
