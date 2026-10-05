@@ -49,6 +49,7 @@ SQLite: pr_history row
 | Database | `src/pr_sentinel/db/database.py` | aiosqlite wrapper: `pr_history`, `seen_deliveries` |
 | Config | `src/pr_sentinel/config.py` | pydantic-settings, all values from environment variables |
 | Entry point | `src/pr_sentinel/main.py` | bot + webhook lifecycle wiring |
+| CLI | `src/pr_sentinel/cli.py` | `index-repo` subcommand: rebuilds `commits`/`file_expertise` from git history |
 
 ## HTTP API
 
