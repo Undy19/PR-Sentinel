@@ -25,16 +25,19 @@ Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 How the pipeline flows from a GitHub event to the Telegram chat:
 
 ```mermaid
-flowchart TD
-    A["GitHub pull_request webhook"] --> B["FastAPI webhook server<br/>(HMAC verify, replay dedupe, queue max 100)"]
-    B --> C["Background worker"]
-    C --> D["Risk analyzer<br/>(OpenAI, 429 retry)"]
-    C --> E["Expertise graph<br/>(SQLite, git history)"]
-    D --> F["Notification composer<br/>(ru/en)"]
+graph TD
+    A["GitHub webhook<br/>(pull_request event)"] -->|POST| B["FastAPI server<br/>(HMAC, replay protection)"]
+    B -->|Immediately returns 200 OK| A
+    B -->|Queue: up to 100 tasks| C["Background async pipeline"]
+
+    C --> D["Risk analyzer<br/>(OpenAI API + backoff on 429)"]
+    C --> E[("SQLite database<br/>(expertise graph + pr_history)")]
+
+    D --> F["Notification composer<br/>(ru/en localization)"]
     E --> F
-    F --> G["Telegram bot"]
-    G --> H["Chat"]
-    C --> I["pr_history (SQLite)"]
+
+    F --> G["Telegram bot<br/>(aiogram 3.x)"]
+    G --> H["Target chat / channel"]
 ```
 
 ## Features

@@ -25,16 +25,20 @@ Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 Как конвейер обрабатывает событие GitHub до отправки уведомления в Telegram-чат:
 
 ```mermaid
-flowchart TD
-    A["Webhook GitHub pull_request"] --> B["Сервер webhook FastAPI<br/>(HMAC-проверка, защита от повторов, очередь до 100)"]
-    B --> C["Фоновый worker"]
-    C --> D["Анализатор риска<br/>(OpenAI, повтор при 429)"]
-    C --> E["Граф компетенций<br/>(SQLite, git-история)"]
-    D --> F["Композитор уведомления<br/>(ru/en)"]
+graph TD
+    A["Webhook GitHub<br/>(pull_request event)"] -->|POST| B["Сервер FastAPI<br/>(HMAC, защита от повторов)"]
+    B -->|Сразу возвращает 200 OK| A
+    B -->|В очередь: до 100 задач| C["Фоновый асинхронный конвейер"]
+
+    C --> D["Анализатор риска<br/>(OpenAI API + Backoff 429)"]
+    C --> E[("База данных SQLite<br/>(Граф компетенций + pr_history)")]
+
+    D --> F["Композитор уведомлений<br/>(Локализация ru/en)"]
     E --> F
-    F --> G["Telegram-бот"]
-    G --> H["Чат"]
-    C --> I["pr_history (SQLite)"]
+
+    F --> G["Telegram-бот<br/>(aiogram 3.x)"]
+    G --> H["Целевой чат / канал"]
+
 ```
 
 ## Возможности
