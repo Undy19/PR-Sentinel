@@ -61,7 +61,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 
 | Operation | Command (planned) |
 |-----------|-------------------|
-| Install dependencies | `pip install -r requirements.txt` or `pip install -e .` |
+| Install dependencies | `pip install -e ".[dev]"` |
 | Run bot (dev) | `python -m pr_sentinel.main` |
 | Run webhook server | `uvicorn pr_sentinel.webhook.server:app` |
 | Run tests | `pytest` |
@@ -125,7 +125,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 ## Runtime/Tooling Preferences
 
 - **Language:** Python 3.11+
-- **Package Manager:** pip (with requirements.txt or pyproject.toml)
+- **Package Manager:** pip (with pyproject.toml)
 - **Runtime:** Standard CPython; no Bun/Node/Deno
 - **Database:** SQLite (stdlib, no external server)
 - **Deployment:** Docker container
