@@ -1,46 +1,69 @@
 # PR Sentinel
+
 [English](README.md) | **Русский**
 
-[![CI](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml/badge.svg)](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml)
-[![Version](https://img.shields.io/badge/version-0.1.0)](CHANGELOG.md)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![CI](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml/badge.svg)
+![Version](https://img.shields.io/badge/version-0.1.0)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Telegram-бот (aiogram 3.x) и FastAPI-webhook, автоматизирующие первичный отбор PR
-для GitHub-репозитория. При каждом событии `pull_request` бот генерирует краткую
-3-строчную оценку риска (LOW / MED / HIGH / CRITICAL) через OpenAI API за ~60
-секунд, затем рекомендует 1–2 релевантных ревьюеров на основе графа эксперти
-из git-истории, хранящегося в SQLite.
+для GitHub-репозитория. При каждом событии `pull_request` бот генерирует краткую  
+3-строчную оценку риска (LOW / MED / HIGH / CRITICAL) через OpenAI API за ~60  
+секунд, а затем рекомендует 1–2 релевантных ревьюеров на основе графа компетенций из git-истории, хранящегося в SQLite.
 
-> **🤖 AI-assisted development (vibe-coded).** Концепция проекта была создана
-> руководителем проекта; реализация выполнена с помощью ИИ (LLM-агенты для
+> **🤖 AI-assisted development (vibe-coded).** Концепция проекта была создана  
+> командой разработки; реализация выполнена с помощью ИИ (LLM-агенты для  
 > написания кода). Финальное состояние было проверено и утверждено людьми.
 
 ## Технологический стек
 
 Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 
+## Архитектура
+
+Как конвейер обрабатывает событие GitHub до отправки уведомления в Telegram-чат:
+
+```mermaid
+flowchart TD
+    A["Webhook GitHub pull_request"] --> B["Сервер webhook FastAPI<br/>(HMAC-проверка, защита от повторов, очередь до 100)"]
+    B --> C["Фоновый worker"]
+    C --> D["Анализатор риска<br/>(OpenAI, повтор при 429)"]
+    C --> E["Граф компетенций<br/>(SQLite, git-история)"]
+    D --> F["Композитор уведомления<br/>(ru/en)"]
+    E --> F
+    F --> G["Telegram-бот"]
+    G --> H["Чат"]
+    C --> I["pr_history (SQLite)"]
+```
+
 ## Возможности
 
 - **Оценка риска** — LLM-оценка риска PR в 3 строках (LOW / MED / HIGH / CRITICAL) с конкретными причинами и уровнем уверенности, генерируется за ~60 с
-- **Обработка rate-limit** — повторные запросы при OpenAI 429 с экспоненциальным backoff (база 2 с, лимит 30 с, 3 попытки)
-- **Рекомендация ревьюеров** — граф эксперти из git-истории (SQLite) ранжирует коммитеров по частоте и свежести изменений; рекомендует 1–2 ревьюеров на PR
-- **Безопасность webhook** — HMAC-проверка `X-Hub-Signature-256`, защита от повторных запросов по `X-GitHub-Delivery`, лимит тела 5 МБ
-- **Асинхронный конвейер** — фоновая очередь обработки (100 элементов); webhook подтверждает сразу, анализ выполняется асинхронно
+- **Обработка ограничений частоты запросов** — повторные запросы при OpenAI 429 с экспоненциальной задержкой (базовая задержка 2 с, максимальная 30 с, 3 попытки)
+- **Рекомендация ревьюеров** — граф компетенций из git-истории (SQLite) ранжирует коммитеров по частоте и свежести изменений; рекомендует 1–2 ревьюеров на PR
+- **Безопасность webhook** — HMAC-проверка `X-Hub-Signature-256`, защита от повторных запросов по `X-GitHub-Delivery`, лимит тела запроса 5 МБ
+- **Асинхронный конвейер** — фоновая очередь обработки (100 элементов); webhook сразу возвращает подтверждение, а анализ выполняется асинхронно
 - **Локализация** — уведомления в Telegram на русском (по умолчанию) или английском (`NOTIFICATION_LANGUAGE=en`)
-- **CI/CD** — ruff (lint + форматирование), mypy (strict), pytest (порог покрытия 60 %), commitlint (Conventional Commits)
+- **CI/CD** — ruff (валидация кода + форматирование), mypy (строгий режим), pytest (порог покрытия тестами 60%), commitlint (Conventional Commits)
 
 ## Быстрый старт
 
-```
+```bash
 pip install -e ".[dev]"
 cp .env.example .env
 ```
 
+```bash
+python -m pr_sentinel.cli index-repo
+```
+
+Индексируйте git-историю в граф компетенций (SQLite), который используется для рекомендаций ревьюеров. Граф полностью перестраивается из git-истории при каждом запуске — повторите после существенных изменений истории. Флаги `--repo-path` и `--db-path` переопределяют `REPO_PATH` / `DATABASE_PATH`.
+
 | Переменная | Обязательна | Описание |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | да | Токен Telegram Bot API |
-| `GITHUB_TOKEN` | да | GitHub PAT или fine-grained токен |
+| `GITHUB_TOKEN` | да | GitHub PAT или fine-grained токен. Использование только на чтение: бот получает diff'ы PR и списки файлов, в GitHub он ничего не пишет. Классический PAT: скоуп `repo` (обязателен для приватных репозиториев). Fine-grained: `Contents: Read` + `Pull requests: Read` для целевого репозитория. |
 | `GITHUB_WEBHOOK_SECRET` | да | HMAC-секрет для `X-Hub-Signature-256` (настраивается в конфигурации webhook GitHub) |
 | `OPENAI_API_KEY` | да | Ключ OpenAI API (или `none` для локального vLLM) |
 | `OPENAI_BASE_URL` | нет | По умолчанию `https://api.openai.com/v1` |
@@ -74,19 +97,30 @@ uvicorn pr_sentinel.webhook.server:app
 pytest
 ```
 
-**Запуск тестов с порогом покрытия (минимум 60%):**
+**Запуск тестов с проверкой покрытия (минимум 60%):**
 
 ```bash
 pytest --cov=pr_sentinel --cov-fail-under=60
 ```
 
-Полный рабочий процесс разработки (lint, форматирование, проверка типов, коммиты и PR) описан в [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Полное описание процесса разработки (линтинг, форматирование, проверка типов, создание коммитов и PR) см. в [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+### Локальное тестирование webhook
+
+GitHub доставляет webhooks только на публичный HTTPS-адрес. Для локальной разработки прокиньте сервер через туннель:
+
+```bash
+ngrok http 8000
+```
+
+(или localtunnel), затем укажите `<tunnel-url>/webhook/github` в качестве webhook-адреса в настройках репозитория GitHub (Settings → Webhooks → Add webhook; тип содержимого `application/json`; события: `pull_request`; секрет — ваш `GITHUB_WEBHOOK_SECRET`). Для продакшена разверните сервер на хосте с публичным доменом + SSL и укажите этот же webhook-адрес туда, синхронизировав секрет.
 
 ## Пример уведомления
 
-Что бот отправляет в чат для каждого нового PR (подписи шаблона по умолчанию на русском; `NOTIFICATION_LANGUAGE=en` переключает их на английский):
+Что бот публикует в чат для каждого нового PR (язык шаблона по умолчанию
+русский; параметр `NOTIFICATION_LANGUAGE=en` переключает его на английский):
 
-```
+```text
 🔀 PR: Add retry on 429 rate-limit
 📊 Риск: 🟡 Средний
 💡 Изменения затрагивают аутентификацию • Добавлен код без тестов
@@ -96,11 +130,11 @@ pytest --cov=pr_sentinel --cov-fail-under=60
 
 ## Документация
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — настройка, стиль, тестирование, коммиты, PR, защита веток
-- [`COMMIT_CONVENTIONS.md`](COMMIT_CONVENTIONS.md) — справочник по Conventional Commits
-- [`SECURITY.md`](SECURITY.md) — политика безопасности, сообщение об уязвимостях, поддерживаемые версии
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — настройка, стиль кода, тестирование, коммиты, PR и защита веток
+- [`COMMIT_CONVENTIONS.md`](COMMIT_CONVENTIONS.md) — справочник по соглашению о коммитах (Conventional Commits)
+- [`SECURITY.md`](SECURITY.md) — политика безопасности, сообщения об уязвимостях, поддерживаемые версии
 - [`docs/architecture.md`](docs/architecture.md) — архитектура, HTTP API, модель данных, конфигурация
 
 ## Лицензия
 
-Проект распространяется под лицензией MIT. Подробности — в файле [LICENSE](LICENSE).
+Этот проект распространяется под лицензией MIT. Подробности см. в файле [LICENSE](LICENSE).
