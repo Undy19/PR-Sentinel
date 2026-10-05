@@ -23,6 +23,16 @@ keywords = [
     "telegram",
     "fastapi",
 ]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
 dependencies = [
     "aiogram>=3.4,<4",
     "fastapi>=0.100,<1",
@@ -33,6 +43,11 @@ dependencies = [
     "pydantic>=2.0,<3",
     "pydantic-settings>=2.0,<3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Undy19/pr-sentinel"
+Repository = "https://github.com/Undy19/pr-sentinel"
+Issues = "https://github.com/Undy19/pr-sentinel/issues"
 
 [project.optional-dependencies]
 dev = [

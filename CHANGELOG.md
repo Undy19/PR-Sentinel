@@ -32,17 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `main` (`.github/workflows/commitlint.yaml`).
 - Project documentation: `README.md`, `CONTRIBUTING.md`,
   `COMMIT_CONVENTIONS.md`, `docs/architecture.md`.
-- Security audit reports (source code, dependencies, consolidated).
 - Local E2E and Telegram send test scripts (`scripts/`).
 - `SECURITY.md` with the security policy and vulnerability reporting process.
 
 ### Changed
 
 - `GITHUB_WEBHOOK_SECRET` is now required and no longer falls back to
-  `GITHUB_TOKEN`. **Breaking change.**
+  `GITHUB_TOKEN`.
 - `TELEGRAM_BOT_TOKEN`, `GITHUB_TOKEN`, and `OPENAI_API_KEY` must be
   non-empty; `GITHUB_REPO` is validated as `owner/repo` with whitespace
-  normalization. **Breaking change.**
+  normalization.
 - Configuration is loaded and validated centrally via `load_settings()` /
   `SettingsError`; both entry points (`python -m pr_sentinel.main`, `uvicorn`)
   print a human-readable list of problematic variables and exit cleanly.

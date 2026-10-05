@@ -11,7 +11,7 @@ Please **do not** report security vulnerabilities through public GitHub issues.
 
 The preferred channel is a **private GitHub Security Advisory**:
 
-- Open a new advisory at [`github.com/Undy19/test/security/advisories/new`](https://github.com/Undy19/test/security/advisories/new)
+- Open a new advisory at [`github.com/Undy19/pr-sentinel/security/advisories/new`](https://github.com/Undy19/pr-sentinel/security/advisories/new)
   (repo → **Security** tab → **New advisory**).
 - If GitHub's security feature is not available for your account, email the
   maintainer and mark the subject `[SECURITY]`.
@@ -33,7 +33,7 @@ A good report includes:
 
 These are target timelines, not guaranteed SLAs.
 
-Once fixed, we publish a [GitHub Security Advisory](https://github.com/Undy19/test/security/advisories)
+Once fixed, we publish a [GitHub Security Advisory](https://github.com/Undy19/pr-sentinel/security/advisories)
 describing the issue, the affected versions, and the fix, and we credit the
 reporter (anonymously if requested).
 

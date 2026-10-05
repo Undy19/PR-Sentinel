@@ -1,6 +1,6 @@
 # PR Sentinel
 
-[![CI](https://github.com/Undy19/test/actions/workflows/ci.yaml/badge.svg)](https://github.com/Undy19/test/actions/workflows/ci.yaml)
+[![CI](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml/badge.svg)](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml)
 [![Version](https://img.shields.io/badge/version-0.1.0)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -19,6 +19,16 @@ stored in SQLite.
 
 Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 
+## Features
+
+- **Risk assessment** — LLM-based 3-line PR risk score (LOW / MED / HIGH / CRITICAL) with specific reasons and confidence, generated in ~60 s
+- **Rate-limit handling** — OpenAI 429 retries with exponential backoff (2 s base, 30 s cap, 3 attempts)
+- **Reviewer recommendation** — git-history expertise graph (SQLite) scores committers by touch frequency + recency; recommends 1–2 reviewers per PR
+- **Webhook security** — `X-Hub-Signature-256` HMAC verification, `X-GitHub-Delivery` replay protection, 5 MB body limit
+- **Async pipeline** — background processing queue (100 items); webhook acknowledges immediately, analysis runs async
+- **Localization** — Telegram notifications in Russian (default) or English (`NOTIFICATION_LANGUAGE=en`)
+- **CI/CD** — ruff (lint + format), mypy (strict), pytest (60 % coverage gate), commitlint (Conventional Commits)
+
 ## Quick start
 
 ```
@@ -26,8 +36,22 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-Fill in the tokens in `.env`, then see `CONTRIBUTING.md` for running the bot, the
-webhook server, and the test suite.
+| Variable | Required | Description |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | yes | Telegram Bot API token |
+| `GITHUB_TOKEN` | yes | GitHub PAT or fine-grained token |
+| `GITHUB_WEBHOOK_SECRET` | yes | HMAC secret for `X-Hub-Signature-256` (set in GitHub webhook config) |
+| `OPENAI_API_KEY` | yes | OpenAI API key (or `none` for local vLLM) |
+| `OPENAI_BASE_URL` | no | Default `https://api.openai.com/v1` |
+| `OPENAI_MODEL` | no | Default `gpt-4o` |
+| `GITHUB_REPO` | yes | `owner/repo` to monitor |
+| `TELEGRAM_CHAT_ID` | yes | Target chat/channel ID |
+| `DATABASE_PATH` | no | Default `pr_sentinel.db` |
+| `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
+
+Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
+
+Then see [`CONTRIBUTING.md`](CONTRIBUTING.md) for running the bot, the webhook server, and the test suite.
 
 ## Example notification
 
