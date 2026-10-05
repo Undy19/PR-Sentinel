@@ -1,4 +1,5 @@
 # PR Sentinel
+**English** | [Русский](README.ru.md)
 
 [![CI](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml/badge.svg)](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml)
 [![Version](https://img.shields.io/badge/version-0.1.0)](CHANGELOG.md)
@@ -51,7 +52,35 @@ cp .env.example .env
 
 Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 
-Then see [`CONTRIBUTING.md`](CONTRIBUTING.md) for running the bot, the webhook server, and the test suite.
+## Running the app
+
+With the environment configured (see the table above), start the services:
+
+**Bot + webhook in one process:**
+
+```bash
+python -m pr_sentinel.main
+```
+
+**Webhook server only:**
+
+```bash
+uvicorn pr_sentinel.webhook.server:app
+```
+
+**Run tests:**
+
+```bash
+pytest
+```
+
+**Run tests with the coverage gate (60% minimum):**
+
+```bash
+pytest --cov=pr_sentinel --cov-fail-under=60
+```
+
+For the full development workflow (lint, format, type-check, commit and PR process), see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Example notification
 
