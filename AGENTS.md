@@ -42,7 +42,7 @@ Risk Analyzer              Expertise Graph Builder
 
 ### Data Flow
 1. GitHub fires `pull_request` webhook → FastAPI endpoint
-2. System fetches PR details via PyGithub
+2. System fetches PR details via httpx (GitHub REST API)
 3. Risk Analyzer sends PR diff to OpenAI for risk scoring
 4. Expertise Graph queries SQLite for relevant committers
 5. Notification Composer formats message with risk emoji, rationale, reviewers
@@ -130,7 +130,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - **Database:** SQLite (stdlib, no external server)
 - **Deployment:** Docker container
 - **CI/CD:** Configured — GitHub Actions workflow at `.github/workflows/ci.yaml` (ruff lint + format, mypy, pytest with 60% coverage gate)
-- **External APIs:** GitHub API (via PyGithub), OpenAI API
+- **External APIs:** GitHub API (via httpx), OpenAI API
 
 ## Testing & QA
 
