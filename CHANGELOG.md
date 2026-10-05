@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2026-10-04
+## [0.1.0] - 2026-10-05
 
 ### Added
 
@@ -34,3 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `COMMIT_CONVENTIONS.md`, `docs/architecture.md`.
 - Security audit reports (source code, dependencies, consolidated).
 - Local E2E and Telegram send test scripts (`scripts/`).
+- `SECURITY.md` with the security policy and vulnerability reporting process.
+
+### Changed
+
+- `GITHUB_WEBHOOK_SECRET` is now required and no longer falls back to
+  `GITHUB_TOKEN`. **Breaking change.**
+- `TELEGRAM_BOT_TOKEN`, `GITHUB_TOKEN`, and `OPENAI_API_KEY` must be
+  non-empty; `GITHUB_REPO` is validated as `owner/repo` with whitespace
+  normalization. **Breaking change.**
+- Configuration is loaded and validated centrally via `load_settings()` /
+  `SettingsError`; both entry points (`python -m pr_sentinel.main`, `uvicorn`)
+  print a human-readable list of problematic variables and exit cleanly.
