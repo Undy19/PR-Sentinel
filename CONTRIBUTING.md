@@ -35,6 +35,26 @@ Required variables:
 - `GITHUB_WEBHOOK_SECRET` — Secret for verifying GitHub webhook signatures
 - `OPENAI_API_KEY` — OpenAI API key for risk analysis
 
+## Running the project
+
+**Bot + webhook in one process:**
+
+```bash
+python -m pr_sentinel.main
+```
+
+**Webhook server only:**
+
+```bash
+uvicorn pr_sentinel.webhook.server:app
+```
+
+**Tests:**
+
+```bash
+pytest
+```
+
 ## Code Style
 
 We enforce consistent formatting and type safety on every commit:

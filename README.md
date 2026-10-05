@@ -17,7 +17,7 @@ stored in SQLite.
 
 ## Tech stack
 
-Python 3.11+, aiogram 3.x, FastAPI, PyGithub, OpenAI API, SQLite.
+Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 
 ## Quick start
 

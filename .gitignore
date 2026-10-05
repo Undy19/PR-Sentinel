@@ -12,3 +12,8 @@ build/
 *.egg-info/
 htmlcov/
 table.md
+*.log
+venv
+.idea
+.vscode
+*.sqlite
