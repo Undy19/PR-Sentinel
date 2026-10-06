@@ -1,4 +1,5 @@
 # PR Sentinel
+**English** | [Русский](README.ru.md)
 
 [![CI](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml/badge.svg)](https://github.com/Undy19/pr-sentinel/actions/workflows/ci.yaml)
 [![Version](https://img.shields.io/badge/version-0.1.0)](CHANGELOG.md)
@@ -19,6 +20,26 @@ stored in SQLite.
 
 Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 
+## Architecture
+
+How the pipeline flows from a GitHub event to the Telegram chat:
+
+```mermaid
+graph TD
+    A["GitHub webhook<br/>(pull_request event)"] -->|POST| B["FastAPI server<br/>(HMAC, replay protection)"]
+    B -->|Immediately returns 200 OK| A
+    B -->|Queue: up to 100 tasks| C["Background async pipeline"]
+
+    C --> D["Risk analyzer<br/>(OpenAI API + backoff on 429)"]
+    C --> E[("SQLite database<br/>(expertise graph from git history + pr_history)")]
+
+    D --> F["Notification composer<br/>(ru/en localization)"]
+    E --> F
+
+    F --> G["Telegram bot<br/>(aiogram 3.x)"]
+    G --> H["Target chat / channel"]
+```
+
 ## Features
 
 - **Risk assessment** — LLM-based 3-line PR risk score (LOW / MED / HIGH / CRITICAL) with specific reasons and confidence, generated in ~60 s
@@ -36,10 +57,16 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
+```bash
+python -m pr_sentinel.cli index-repo
+```
+
+Index the git history into the SQLite expertise graph used for reviewer recommendations. The graph is fully rebuilt from git history on every run — re-run after significant history changes. `--repo-path` and `--db-path` override `REPO_PATH` / `DATABASE_PATH`.
+
 | Variable | Required | Description |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | yes | Telegram Bot API token |
-| `GITHUB_TOKEN` | yes | GitHub PAT or fine-grained token |
+| `GITHUB_TOKEN` | yes | GitHub PAT or fine-grained token. Read-only usage: the bot fetches PR diffs and file lists, it never writes to GitHub. Classic PAT: `repo` scope (required for private repos). Fine-grained: `Contents: Read` + `Pull requests: Read` on the target repository. |
 | `GITHUB_WEBHOOK_SECRET` | yes | HMAC secret for `X-Hub-Signature-256` (set in GitHub webhook config) |
 | `OPENAI_API_KEY` | yes | OpenAI API key (or `none` for local vLLM) |
 | `OPENAI_BASE_URL` | no | Default `https://api.openai.com/v1` |
@@ -51,7 +78,45 @@ cp .env.example .env
 
 Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 
-Then see [`CONTRIBUTING.md`](CONTRIBUTING.md) for running the bot, the webhook server, and the test suite.
+## Running the app
+
+With the environment configured (see the table above), start the services:
+
+**Bot + webhook in one process:**
+
+```bash
+python -m pr_sentinel.main
+```
+
+**Webhook server only:**
+
+```bash
+uvicorn pr_sentinel.webhook.server:app
+```
+
+**Run tests:**
+
+```bash
+pytest
+```
+
+**Run tests with the coverage gate (60% minimum):**
+
+```bash
+pytest --cov=pr_sentinel --cov-fail-under=60
+```
+
+For the full development workflow (lint, format, type-check, commit and PR process), see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+### Testing the webhook locally
+
+GitHub delivers webhooks only to a public HTTPS URL. For local development, tunnel the server:
+
+```bash
+ngrok http 8000
+```
+
+(or localtunnel), then set `<tunnel-url>/webhook/github` as the webhook URL in GitHub repo settings (Settings → Webhooks → Add webhook; content type `application/json`; events: `pull_request`; secret = your `GITHUB_WEBHOOK_SECRET`). For production, deploy the server on a host with a public domain + SSL and point the webhook URL there, keeping the secret in sync.
 
 ## Example notification
 
