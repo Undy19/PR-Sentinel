@@ -109,6 +109,14 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - Full reference: `COMMIT_CONVENTIONS.md`
 - Examples: `feat(analyzer): add retry on 429`, `fix(bot): close session on shutdown`
 
+**Pull Requests:**
+- Create PRs strictly following the "Pull Requests" section of `CONTRIBUTING.md`
+- Use the PR template (`.github/PULL_REQUEST_TEMPLATE.md`) and fill in every section
+- Keep PRs small and focused: one logical change per PR
+- CI must be green before requesting review: ruff (lint + format), mypy, pytest (60% coverage gate), commitlint
+- `main` is protected by a GitHub ruleset: required checks `CI` + `Commitlint`, squash merge only — do not merge with failing checks
+- For larger features, open an issue first to discuss the approach
+
 ## Important Files
 
 | File | Purpose |
