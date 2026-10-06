@@ -2,15 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# Ensure src/ is on sys.path so the pr_sentinel package is importable
-# without installation
-_SRC_ROOT = str(Path(__file__).resolve().parent.parent)
-if _SRC_ROOT not in sys.path:
-    sys.path.insert(0, _SRC_ROOT)
-
 import asyncio
 import logging
 import os

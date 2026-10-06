@@ -12,20 +12,13 @@ no other settings (bot tokens, etc.) are required.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# Ensure src/ is on sys.path so the pr_sentinel package is importable
-# without installation
-_SRC_ROOT = str(Path(__file__).resolve().parent.parent)
-if _SRC_ROOT not in sys.path:
-    sys.path.insert(0, _SRC_ROOT)
-
 import argparse
 import asyncio
 import logging
 import os
 import shutil
+import sys
+from pathlib import Path
 
 import aiosqlite
 
@@ -123,7 +116,7 @@ def _run_index(args: argparse.Namespace) -> int:
 
     try:
         commits, authors, expertise_rows = asyncio.run(_index_repo(str(repo), str(db_path)))
-    except RuntimeError as exc:
+    except (OSError, aiosqlite.Error, RuntimeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
