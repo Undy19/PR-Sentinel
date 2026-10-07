@@ -41,3 +41,21 @@ jobs:
 
       - name: Tests (pytest)
         run: pytest --cov=pr_sentinel --cov-fail-under=60
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

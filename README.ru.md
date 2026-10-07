@@ -120,6 +120,18 @@ ngrok http 8000
 
 (или localtunnel), затем укажите `<tunnel-url>/webhook/github` в качестве webhook-адреса в настройках репозитория GitHub (Settings → Webhooks → Add webhook; тип содержимого `application/json`; события: `pull_request`; секрет — ваш `GITHUB_WEBHOOK_SECRET`). Для продакшена разверните сервер на хосте с публичным доменом + SSL и укажите этот же webhook-адрес туда, синхронизировав секрет.
 
+## Развёртывание (Docker)
+
+```bash
+cp .env.example .env   # затем правьте секреты, chmod 600 .env
+docker compose up -d
+```
+
+Контейнер запускает бота и webhook-сервер вместе, хранит SQLite-базу в `./data`
+и проверяет здоровье через `GET /health`. Полное руководство по продакшену —
+TLS reverse proxy, настройка GitHub webhook, бэкапы, обновление графа,
+обновление и откат: [`docs/deployment.md`](docs/deployment.md).
+
 ## Пример уведомления
 
 Что бот публикует в чат для каждого нового PR (язык шаблона по умолчанию

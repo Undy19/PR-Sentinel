@@ -119,6 +119,18 @@ ngrok http 8000
 
 (or localtunnel), then set `<tunnel-url>/webhook/github` as the webhook URL in GitHub repo settings (Settings → Webhooks → Add webhook; content type `application/json`; events: `pull_request`; secret = your `GITHUB_WEBHOOK_SECRET`). For production, deploy the server on a host with a public domain + SSL and point the webhook URL there, keeping the secret in sync.
 
+## Deployment (Docker)
+
+```bash
+cp .env.example .env   # then edit secrets, chmod 600 .env
+docker compose up -d
+```
+
+The container runs the bot and the webhook server together, persists the SQLite
+database in `./data`, and health-checks `GET /health`. Full production guide —
+TLS reverse proxy, GitHub webhook setup, backups, graph refresh, upgrade and
+rollback: [`docs/deployment.md`](docs/deployment.md).
+
 ## Example notification
 
 What the bot posts to the chat for each new PR (template labels are in

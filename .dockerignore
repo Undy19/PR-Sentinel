@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# Tests and test fixtures
+tests
+test-repo
+
+# Build and packaging artifacts
+build
+dist
+*.egg-info
+*.whl
+
+# Python caches and artifacts
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# Local state and secrets — never part of the image
+*.db
+*.sqlite
+.env
+
+# Environments and tooling
+.venv
+venv
+node_modules
+package.json
+package-lock.json
+commitlint.config.js
+
+# Docs, scripts and scratch files not needed at build time
+docs
+scripts
+*.md
+!README.md
+table.md
+*.log
+.idea
+.vscode

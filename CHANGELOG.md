@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Docker deployment: `Dockerfile` (python:3.11-slim with git, non-root user,
+  `HEALTHCHECK` against `GET /health`), `docker-compose.yaml` with a SQLite
+  data volume, a `docker` build job in CI, and `docs/deployment.md` (TLS
+  reverse proxy, GitHub webhook setup, secrets, backups, graph refresh,
+  upgrade/rollback, capacity notes).
 - Integration test `tests/test_expertise_integration.py`: builds the
   expertise graph from the tracked `test-repo` fixture (57 commits, 3
   authors) — the charter acceptance criterion for ≥50 commits / ≥3 authors.
