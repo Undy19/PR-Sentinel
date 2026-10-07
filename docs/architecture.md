@@ -149,6 +149,8 @@ All configuration comes from environment variables (see `.env.example`):
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
 | `REPLAY_PROTECTION_ENABLED` | no | default `true` |
 | `REPO_PATH` | no | default `.` — git repo path for the expertise graph |
+| `LATENCY_BUDGET_SECONDS` | no | default `10` — notification latency budget; per-stage latency is logged per PR, exceeding the budget logs a warning |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | no | default `3600` — periodic expertise graph rebuild; `0` disables |
 | `HOST` | no | default `0.0.0.0` — webhook server bind host |
 | `PORT` | no | default `8000` — webhook server port |
 

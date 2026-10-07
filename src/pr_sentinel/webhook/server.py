@@ -16,9 +16,10 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -30,7 +31,7 @@ from pr_sentinel.analyzer.risk import analyze_pr
 from pr_sentinel.bot.bot import PRBot
 from pr_sentinel.config import Settings, SettingsError, load_settings
 from pr_sentinel.db.database import Database
-from pr_sentinel.graph.expertise import ExpertiseGraph
+from pr_sentinel.graph.expertise import ExpertiseGraph, Reviewer
 from pr_sentinel.notifications.composer import NotificationComposer
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ class WebhookDeps:
     composer: NotificationComposer
     github: httpx.AsyncClient
     db: Database
+    refresher: asyncio.Task[None] | None = None  # periodic expertise graph refresh
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,7 @@ class WorkItem:
     model: str
     api_key: str | None
     base_url: str | None
+    enqueued_at: float = field(default_factory=time.monotonic)  # webhook receipt time for latency
 
 
 def _verify_signature(body: bytes, signature: str | None, secret: str) -> bool:
@@ -98,11 +101,48 @@ async def _fetch_pr_diff_and_files(
     return diff_resp.text, files
 
 
+async def _resolve_reviewer_logins(deps: WebhookDeps, reviewers: list[Reviewer]) -> None:
+    """Replace email local-parts with real GitHub logins (cached API lookup).
+
+    The graph derives ``Reviewer.login`` from the commit author email's
+    local part, which is often not the author's GitHub username. Successful
+    resolutions are cached in the ``login_map`` table; failures fall back
+    to the local part for this PR only.
+    """
+    for reviewer in reviewers:
+        cached = await deps.graph.cached_github_login(reviewer.login)
+        if cached:
+            reviewer.login = cached
+            continue
+        email = await deps.graph.author_email(reviewer.login)
+        if not email:
+            continue
+        try:
+            resp = await deps.github.get("/search/users", params={"q": f'"{email}" in:email'})
+            resp.raise_for_status()
+            raw: object = resp.json()
+            items = raw.get("items") if isinstance(raw, dict) else None
+        except (httpx.HTTPError, ValueError):
+            logger.warning("GitHub login lookup failed for %s; keeping email local-part", email)
+            continue
+        if (
+            isinstance(items, list)
+            and items
+            and isinstance(items[0], dict)
+            and isinstance(items[0].get("login"), str)
+        ):
+            github_login = items[0]["login"]
+            await deps.graph.cache_github_login(reviewer.login, github_login)
+            reviewer.login = github_login
+
+
 async def _process_work_item(deps: WebhookDeps, item: WorkItem) -> None:
     """Run the full analysis/notification pipeline for one accepted item."""
+    started = time.monotonic()
     diff, files = await _fetch_pr_diff_and_files(
         deps.github, deps.settings.github_repo, item.pr_number
     )
+    after_fetch = time.monotonic()
     risk = await analyze_pr(
         diff=diff,
         pr_title=item.title,
@@ -112,7 +152,10 @@ async def _process_work_item(deps: WebhookDeps, item: WorkItem) -> None:
         api_key=item.api_key,
         base_url=item.base_url,
     )
+    after_analyze = time.monotonic()
     reviewers = await deps.graph.recommend_reviewers(files)
+    await _resolve_reviewer_logins(deps, reviewers)
+    after_recommend = time.monotonic()
     message = deps.composer.compose(
         pr_title=item.title,
         pr_url=item.url,
@@ -121,10 +164,29 @@ async def _process_work_item(deps: WebhookDeps, item: WorkItem) -> None:
         language=item.language,
     )
     await deps.bot.send_notification(deps.settings.telegram_chat_id, message)
+    after_send = time.monotonic()
     await deps.db.record_pr(
         item.pr_number, item.title, item.url, risk.level, datetime.now(UTC).isoformat()
     )
     logger.info("notified about PR %s (risk=%s)", item.pr_number, risk.level)
+    total_ms = int((after_send - item.enqueued_at) * 1000)
+    logger.info(
+        "pr #%s latency: fetch=%dms analyze=%dms recommend=%dms send=%dms total=%dms",
+        item.pr_number,
+        int((after_fetch - started) * 1000),
+        int((after_analyze - after_fetch) * 1000),
+        int((after_recommend - after_analyze) * 1000),
+        int((after_send - after_recommend) * 1000),
+        total_ms,
+    )
+    budget = deps.settings.latency_budget_seconds
+    if total_ms > budget * 1000:
+        logger.warning(
+            "pr #%s exceeded the latency budget: total=%dms > %ds",
+            item.pr_number,
+            total_ms,
+            budget,
+        )
 
 
 async def _queue_worker(deps: WebhookDeps, queue: asyncio.Queue[WorkItem]) -> None:
@@ -150,6 +212,26 @@ def create_github_client(token: str) -> httpx.AsyncClient:
             "X-GitHub-Api-Version": GITHUB_API_VERSION,
         },
     )
+
+
+async def _graph_refresher(graph: ExpertiseGraph, repo_path: str, interval: float) -> None:
+    """Rebuild the expertise graph from ``repo_path`` every ``interval`` seconds."""
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            await graph.build_from_repo(repo_path)
+            logger.info("expertise graph refreshed from %s", repo_path)
+        except Exception:
+            logger.exception("expertise graph refresh from %s failed", repo_path)
+
+
+def start_graph_refresher(
+    graph: ExpertiseGraph, repo_path: str, interval_seconds: int
+) -> asyncio.Task[None] | None:
+    """Start the periodic graph refresh task; ``0`` disables it."""
+    if interval_seconds <= 0:
+        return None
+    return asyncio.create_task(_graph_refresher(graph, repo_path, interval_seconds))
 
 
 async def build_default_deps(settings: Settings) -> WebhookDeps:
@@ -178,11 +260,18 @@ async def build_default_deps(settings: Settings) -> WebhookDeps:
         composer=NotificationComposer(),
         github=create_github_client(settings.github_token),
         db=db,
+        refresher=start_graph_refresher(
+            graph, settings.repo_path, settings.graph_refresh_interval_seconds
+        ),
     )
 
 
 async def _close_bundle(deps: WebhookDeps) -> None:
     """Release all resources held by a service bundle (each step idempotent)."""
+    if deps.refresher is not None:
+        deps.refresher.cancel()
+        with suppress(asyncio.CancelledError):
+            await deps.refresher
     await deps.github.aclose()
     await deps.graph.close()
     await deps.db.close()
