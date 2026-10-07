@@ -76,6 +76,8 @@ Index the git history into the SQLite expertise graph used for reviewer recommen
 | `DATABASE_PATH` | no | Default `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
 | `REPO_PATH` | no | Local checkout of `GITHUB_REPO` used to build the expertise graph (bot and standalone webhook). Default `.` |
+| `LATENCY_BUDGET_SECONDS` | no | Notification latency budget (webhook receipt → Telegram send); exceeding it logs a warning. Default `10` |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | no | Periodic expertise graph rebuild interval; `0` disables. Default `3600` |
 
 Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 

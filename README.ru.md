@@ -77,6 +77,8 @@ python -m pr_sentinel.cli index-repo
 | `DATABASE_PATH` | нет | По умолчанию `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | нет | `ru` (по умолчанию) или `en` |
 | `REPO_PATH` | нет | Локальный чекаут `GITHUB_REPO`, из которого строится граф компетенций (бот и standalone webhook). По умолчанию `.` |
+| `LATENCY_BUDGET_SECONDS` | нет | Бюджет задержки уведомления (приём вебхука → отправка в Telegram); превышение логируется WARNING. По умолчанию `10` |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | нет | Интервал периодической пересборки графа компетенций; `0` отключает. По умолчанию `3600` |
 
 Полный справочник: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 

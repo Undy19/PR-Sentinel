@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import signal
+from contextlib import suppress
 from functools import partial
 from types import FrameType
 
@@ -16,7 +17,12 @@ from pr_sentinel.config import SettingsError, load_settings
 from pr_sentinel.db.database import Database
 from pr_sentinel.graph.expertise import ExpertiseGraph
 from pr_sentinel.notifications.composer import NotificationComposer
-from pr_sentinel.webhook.server import WebhookDeps, create_app, create_github_client
+from pr_sentinel.webhook.server import (
+    WebhookDeps,
+    create_app,
+    create_github_client,
+    start_graph_refresher,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +72,9 @@ async def main() -> None:
             settings.repo_path,
         )
 
+    refresher = start_graph_refresher(
+        graph, settings.repo_path, settings.graph_refresh_interval_seconds
+    )
     bot = PRBot(settings.telegram_bot_token)
     deps = WebhookDeps(
         settings=settings,
@@ -74,6 +83,7 @@ async def main() -> None:
         composer=NotificationComposer(),
         github=create_github_client(settings.github_token),
         db=db,
+        refresher=refresher,
     )
     app = create_app(deps)
 
@@ -102,6 +112,10 @@ async def main() -> None:
         if isinstance(result, BaseException):
             logger.error("%s exited with: %s", name, result)
 
+    if refresher is not None:
+        refresher.cancel()
+        with suppress(asyncio.CancelledError):
+            await refresher
     await deps.github.aclose()
     await graph.close()
     await db.close()
