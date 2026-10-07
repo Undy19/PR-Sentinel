@@ -27,7 +27,7 @@ Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 ```mermaid
 graph TD
     A["Webhook GitHub<br/>(pull_request event)"] -->|POST| B["Сервер FastAPI<br/>(HMAC, защита от повторов)"]
-    B -->|Сразу возвращает 200 OK| A
+    B -->|Сразу возвращает 202 Accepted| A
     B -->|В очередь: до 100 задач| C["Фоновый асинхронный конвейер"]
 
     C --> D["Анализатор риска<br/>(OpenAI API + Backoff 429)"]

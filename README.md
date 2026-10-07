@@ -27,7 +27,7 @@ How the pipeline flows from a GitHub event to the Telegram chat:
 ```mermaid
 graph TD
     A["GitHub webhook<br/>(pull_request event)"] -->|POST| B["FastAPI server<br/>(HMAC, replay protection)"]
-    B -->|Immediately returns 200 OK| A
+    B -->|Immediately returns 202 Accepted| A
     B -->|Queue: up to 100 tasks| C["Background async pipeline"]
 
     C --> D["Risk analyzer<br/>(OpenAI API + backoff on 429)"]

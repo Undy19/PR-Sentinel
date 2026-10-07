@@ -94,7 +94,7 @@ class NotificationComposer:
             risk: LLM risk assessment for the PR.
             reviewers: Recommended reviewers (may be empty).
             language: Template language, ``"ru"`` (default) or ``"en"``;
-                unknown values fall back to ``"ru"``.
+                unknown values fall back to ``"en"``.
 
         Returns:
             The complete MarkdownV2 message string.

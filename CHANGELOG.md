@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Integration test `tests/test_expertise_integration.py`: builds the
+  expertise graph from the tracked `test-repo` fixture (57 commits, 3
+  authors) — the charter acceptance criterion for ≥50 commits / ≥3 authors.
+
 ### Fixed
 
 - Webhook standalone mode (`uvicorn pr_sentinel.webhook.server:app`) now builds
