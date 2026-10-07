@@ -12,10 +12,6 @@ filtering for a GitHub repository. On every `pull_request` event it generates a 
 seconds, then recommends 1–2 relevant reviewers from a git-history expertise graph
 stored in SQLite.
 
-> **🤖 AI-assisted development (vibe-coded).** The project concept was created by the
-> project lead; the implementation was done with the help of AI (LLM-based coding
-> agents). Humans reviewed and approved the final state.
-
 ## Tech stack
 
 Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
@@ -156,3 +152,7 @@ Russian by default; `NOTIFICATION_LANGUAGE=en` switches them to English):
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+> **🤖 AI-assisted development (vibe-coded).** The project concept was created by the
+> project lead; the implementation was done with the help of AI (LLM-based coding
+> agents). Humans reviewed and approved the final state.
