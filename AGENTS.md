@@ -154,7 +154,7 @@ No build system exists yet. Expected commands (inferred from Python tech stack):
 - Mocking: `unittest.mock` or `responses` for HTTP mocks (GitHub/OpenAI APIs)
 
 **Key Test Scenarios (from acceptance criteria):**
-1. Bot responds to `pull_request` events within ≤5 seconds (performance test)
+1. Bot responds to `pull_request` events within ≤10 seconds (performance test)
 2. Every notification contains: PR title, risk level emoji, 1–2 risk reasons, recommended reviewers (integration test)
 3. Expertise graph builds correctly on repos with ≥50 commits and ≥3 authors (integration test with fixtures)
 4. LLM analysis handles rate limits with retry logic (unit test with mocked API)

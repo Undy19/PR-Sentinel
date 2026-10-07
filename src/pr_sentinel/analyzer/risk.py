@@ -6,7 +6,7 @@ returns a structured :class:`RiskAssessment`.
 Guarantees:
 - HTTP 429 rate limits are retried with exponential backoff
   (2 s base, 30 s cap, at most 3 retries).
-- Every API call is bounded by a 30 s timeout.
+- Every API call is bounded by a 45 s timeout.
 - Malformed model output degrades to a ``HIGH`` assessment instead of
   raising, so the notification pipeline never stalls on the LLM.
 """

@@ -1,0 +1,14 @@
+services:
+  sentinel:
+    build: .
+    image: pr-sentinel:latest
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # SQLite persistence: DATABASE_PATH defaults to /data/pr_sentinel.db in the image.
+      - ./data:/data
+      # REPO_PATH must point at a git checkout of GITHUB_REPO available inside
+      # the container. Mount it read-only and set REPO_PATH=/repo in .env:
+      # - ./repo:/repo:ro
+    restart: unless-stopped

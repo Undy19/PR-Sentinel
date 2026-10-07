@@ -27,7 +27,7 @@ Python 3.11+, aiogram 3.x, FastAPI, httpx, OpenAI API, SQLite.
 ```mermaid
 graph TD
     A["Webhook GitHub<br/>(pull_request event)"] -->|POST| B["Сервер FastAPI<br/>(HMAC, защита от повторов)"]
-    B -->|Сразу возвращает 200 OK| A
+    B -->|Сразу возвращает 202 Accepted| A
     B -->|В очередь: до 100 задач| C["Фоновый асинхронный конвейер"]
 
     C --> D["Анализатор риска<br/>(OpenAI API + Backoff 429)"]
@@ -77,6 +77,8 @@ python -m pr_sentinel.cli index-repo
 | `DATABASE_PATH` | нет | По умолчанию `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | нет | `ru` (по умолчанию) или `en` |
 | `REPO_PATH` | нет | Локальный чекаут `GITHUB_REPO`, из которого строится граф компетенций (бот и standalone webhook). По умолчанию `.` |
+| `LATENCY_BUDGET_SECONDS` | нет | Бюджет задержки уведомления (приём вебхука → отправка в Telegram); превышение логируется WARNING. По умолчанию `10` |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | нет | Интервал периодической пересборки графа компетенций; `0` отключает. По умолчанию `3600` |
 
 Полный справочник: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 
@@ -119,6 +121,18 @@ ngrok http 8000
 ```
 
 (или localtunnel), затем укажите `<tunnel-url>/webhook/github` в качестве webhook-адреса в настройках репозитория GitHub (Settings → Webhooks → Add webhook; тип содержимого `application/json`; события: `pull_request`; секрет — ваш `GITHUB_WEBHOOK_SECRET`). Для продакшена разверните сервер на хосте с публичным доменом + SSL и укажите этот же webhook-адрес туда, синхронизировав секрет.
+
+## Развёртывание (Docker)
+
+```bash
+cp .env.example .env   # затем правьте секреты, chmod 600 .env
+docker compose up -d
+```
+
+Контейнер запускает бота и webhook-сервер вместе, хранит SQLite-базу в `./data`
+и проверяет здоровье через `GET /health`. Полное руководство по продакшену —
+TLS reverse proxy, настройка GitHub webhook, бэкапы, обновление графа,
+обновление и откат: [`docs/deployment.md`](docs/deployment.md).
 
 ## Пример уведомления
 

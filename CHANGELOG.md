@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Added
+
+- Docker deployment: `Dockerfile` (python:3.11-slim with git, non-root user,
+  `HEALTHCHECK` against `GET /health`), `docker-compose.yaml` with a SQLite
+  data volume, a `docker` build job in CI, and `docs/deployment.md` (TLS
+  reverse proxy, GitHub webhook setup, secrets, backups, graph refresh,
+  upgrade/rollback, capacity notes).
+- Integration test `tests/test_expertise_integration.py`: builds the
+  expertise graph from the tracked `test-repo` fixture (57 commits, 3
+  authors) — the charter acceptance criterion for ≥50 commits / ≥3 authors.
+- Latency observability: every processed PR logs per-stage timings
+  (`fetch` / `analyze` / `recommend` / `send`) and the webhook-receipt-to-send
+  total; exceeding `LATENCY_BUDGET_SECONDS` (default 10 s, the charter's
+  notification target) logs a warning.
+- Periodic expertise graph refresh: the graph is rebuilt from `REPO_PATH`
+  every `GRAPH_REFRESH_INTERVAL_SECONDS` (default 3600 s, `0` disables), so
+  commits merged after startup become visible without a restart.
+- Reviewer login resolution: email local-parts are resolved to real GitHub
+  logins via `GET /search/users?q="<email>" in:email` and cached in a new
+  `login_map` table; failed lookups fall back to the local part. The
+  `commits` table gains an `author_email` column (auto-migrated in place).
 ### Fixed
 
 - Webhook standalone mode (`uvicorn pr_sentinel.webhook.server:app`) now builds

@@ -11,7 +11,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import sqlite3
 import subprocess
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Self
@@ -114,6 +116,7 @@ class ExpertiseGraph:
                 sha TEXT PRIMARY KEY,
                 author TEXT NOT NULL,
                 author_login TEXT NOT NULL,
+                author_email TEXT,
                 files TEXT NOT NULL,
                 timestamp TEXT NOT NULL
             );
@@ -126,8 +129,16 @@ class ExpertiseGraph:
             );
             CREATE INDEX IF NOT EXISTS idx_file_expertise_path
                 ON file_expertise (file_path);
+            CREATE TABLE IF NOT EXISTS login_map (
+                author_login TEXT PRIMARY KEY,
+                github_login TEXT NOT NULL,
+                resolved_at TEXT NOT NULL
+            );
             """
         )
+        with suppress(sqlite3.OperationalError):
+            # Pre-existing databases predate the author_email column.
+            await conn.execute("ALTER TABLE commits ADD COLUMN author_email TEXT")
         await conn.commit()
 
     async def build_from_repo(self, repo_path: str) -> None:
@@ -179,11 +190,12 @@ class ExpertiseGraph:
         await conn.execute("DELETE FROM file_expertise")
 
         commit_rows = [
-            (sha, author, login, ",".join(files), ts) for sha, author, login, ts, files in commits
+            (sha, author, login, email, ",".join(files), ts)
+            for sha, author, login, email, ts, files in commits
         ]
         await conn.executemany(
-            "INSERT OR IGNORE INTO commits (sha, author, author_login, files, timestamp) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO commits (sha, author, author_login, author_email, files, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             commit_rows,
         )
 
@@ -195,7 +207,7 @@ class ExpertiseGraph:
             "last_commit_ts = MAX(file_expertise.last_commit_ts, excluded.last_commit_ts)"
         )
         file_row_count = 0
-        for _sha, _author, login, ts, files in commits:
+        for _sha, _author, login, _email, ts, files in commits:
             for file_path in files:
                 await conn.execute(upsert_sql, (login, file_path, ts))
                 file_row_count += 1
@@ -209,15 +221,18 @@ class ExpertiseGraph:
         )
 
     @staticmethod
-    def _parse_git_log(output: str) -> list[tuple[str, str, str, str, list[str]]]:
+    def _parse_git_log(
+        output: str,
+    ) -> list[tuple[str, str, str, str, str, list[str]]]:
         """Parse ``git log --name-only`` output.
 
-        Returns ``(sha, author, author_login, timestamp, files)`` tuples
-        in the order git emitted them (newest first). The login is the
-        local part of the author email, falling back to the author name.
+        Returns ``(sha, author, author_login, author_email, timestamp,
+        files)`` tuples in the order git emitted them (newest first).
+        The login is the local part of the author email, falling back
+        to the author name.
         """
-        commits: list[tuple[str, str, str, str, list[str]]] = []
-        current: tuple[str, str, str, str, list[str]] | None = None
+        commits: list[tuple[str, str, str, str, str, list[str]]] = []
+        current: tuple[str, str, str, str, str, list[str]] | None = None
 
         for line in output.splitlines():
             parts = line.split("|", 3)
@@ -226,9 +241,9 @@ class ExpertiseGraph:
                     commits.append(current)
                 sha, author, email, ts = parts
                 login = email.split("@", 1)[0].strip() or author.strip()
-                current = (sha, author.strip(), login, _parse_timestamp(ts), [])
+                current = (sha, author.strip(), login, email.strip(), _parse_timestamp(ts), [])
             elif current is not None and line.strip():
-                current[4].append(line.strip())
+                current[5].append(line.strip())
 
         if current is not None:
             commits.append(current)
@@ -302,6 +317,38 @@ class ExpertiseGraph:
         )
         row = await cursor.fetchone()
         return row[0] if row else login
+
+    async def author_email(self, login: str) -> str | None:
+        """Author email recorded for the latest commit of ``login``."""
+        conn = self._require_conn()
+        cursor = await conn.execute(
+            "SELECT author_email FROM commits WHERE author_login = ? "
+            "ORDER BY timestamp DESC LIMIT 1",
+            (login,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row and row[0] else None
+
+    async def cached_github_login(self, login: str) -> str | None:
+        """Cached GitHub login resolved from the author email, if any."""
+        conn = self._require_conn()
+        cursor = await conn.execute(
+            "SELECT github_login FROM login_map WHERE author_login = ?",
+            (login,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
+
+    async def cache_github_login(self, login: str, github_login: str) -> None:
+        """Remember the GitHub login resolved for ``login`` (email local-part)."""
+        conn = self._require_conn()
+        await conn.execute(
+            "INSERT INTO login_map (author_login, github_login, resolved_at) VALUES (?, ?, ?) "
+            "ON CONFLICT (author_login) DO UPDATE SET "
+            "github_login = excluded.github_login, resolved_at = excluded.resolved_at",
+            (login, github_login, datetime.now(UTC).isoformat()),
+        )
+        await conn.commit()
 
     async def close(self) -> None:
         """Close the database connection (idempotent)."""

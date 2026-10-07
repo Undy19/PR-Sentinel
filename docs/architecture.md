@@ -26,7 +26,9 @@ OpenAI chat model:                         SQLite lookup of file_expertise
 level + 1–3 reasons + confidence           for the changed files:
 429 → exponential backoff (2 s base,      score = 40% touch frequency
 30 s cap, 3 retries); 45 s timeout;       + 60% recency (90-day half-life)
-parse failure → HIGH fallback             top 1–2 reviewers
+parse failure → HIGH fallback             top 1–2 reviewers; logins
+                                          via GitHub /search/users,
+                                          cached in login_map
   ↓                                                  ↓
   └─────────────────────────┬────────────────────────┘
                             ↓
@@ -41,9 +43,9 @@ SQLite: pr_history row
 
 | Module | File | Responsibility |
 |---|---|---|
-| Webhook server | `src/pr_sentinel/webhook/server.py` | FastAPI app, signature verification, replay protection, work queue, background worker, GitHub REST client |
+| Webhook server | `src/pr_sentinel/webhook/server.py` | FastAPI app, signature verification, replay protection, work queue, background worker, GitHub REST client, latency metrics, periodic graph refresh, reviewer login resolution |
 | Risk analyzer | `src/pr_sentinel/analyzer/risk.py` | OpenAI call, JSON parsing, retry/backoff, `RiskAssessment` dataclass |
-| Expertise graph | `src/pr_sentinel/graph/expertise.py` | `git log --name-only` parsing, `commits` / `file_expertise` tables, reviewer scoring |
+| Expertise graph | `src/pr_sentinel/graph/expertise.py` | `git log --name-only` parsing, `commits` / `file_expertise` / `login_map` tables, reviewer scoring |
 | Notification composer | `src/pr_sentinel/notifications/composer.py` | MarkdownV2 message formatting with ru/en localization and escaping |
 | Bot | `src/pr_sentinel/bot/bot.py` | aiogram 3.x session lifecycle, message sending with retries |
 | Database | `src/pr_sentinel/db/database.py` | aiosqlite wrapper: `pr_history`, `seen_deliveries` |
@@ -89,7 +91,7 @@ Responses:
 
 ## Data model (SQLite)
 
-One database file (`DATABASE_PATH`, default `pr_sentinel.db`), four tables:
+One database file (`DATABASE_PATH`, default `pr_sentinel.db`), five tables:
 
 ```sql
 -- reviewed PRs (src/pr_sentinel/db/database.py)
@@ -113,6 +115,7 @@ CREATE TABLE commits (
     sha TEXT PRIMARY KEY,
     author TEXT NOT NULL,
     author_login TEXT NOT NULL,   -- local part of author email, else name
+    author_email TEXT,            -- raw author email (added in place by ALTER on older DBs)
     files TEXT NOT NULL,
     timestamp TEXT NOT NULL       -- UTC ISO-8601
 );
@@ -126,10 +129,21 @@ CREATE TABLE file_expertise (
     PRIMARY KEY (author_login, file_path)
 );
 CREATE INDEX idx_file_expertise_path ON file_expertise (file_path);
+
+-- cached email→GitHub login resolutions (src/pr_sentinel/graph/expertise.py)
+CREATE TABLE login_map (
+    author_login TEXT PRIMARY KEY,
+    github_login TEXT NOT NULL,
+    resolved_at TEXT              -- UTC ISO-8601
+);
 ```
 
 All timestamps are normalized to UTC ISO-8601 so lexicographic order equals
 chronological order.
+
+`commits` and `file_expertise` are fully derived from git history and are
+rebuilt (`DELETE` + full `INSERT`) at startup, on `index-repo`, and every
+`GRAPH_REFRESH_INTERVAL_SECONDS`; `login_map` is preserved across rebuilds.
 
 ## Configuration
 
@@ -149,6 +163,8 @@ All configuration comes from environment variables (see `.env.example`):
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
 | `REPLAY_PROTECTION_ENABLED` | no | default `true` |
 | `REPO_PATH` | no | default `.` — git repo path for the expertise graph |
+| `LATENCY_BUDGET_SECONDS` | no | default `10` — notification latency budget; per-stage latency is logged per PR, exceeding the budget logs a warning |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | no | default `3600` — periodic expertise graph rebuild; `0` disables |
 | `HOST` | no | default `0.0.0.0` — webhook server bind host |
 | `PORT` | no | default `8000` — webhook server port |
 

@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     telegram_chat_id: int
     notification_language: str = "ru"  # "ru" or "en"
     replay_protection_enabled: bool = True  # set False to skip X-GitHub-Delivery dedup (SEC-09)
+    latency_budget_seconds: int = Field(
+        10, ge=1
+    )  # notification target from webhook receipt to Telegram send
+    graph_refresh_interval_seconds: int = Field(
+        3600, ge=0
+    )  # periodic expertise graph rebuild; 0 disables
 
     class Config:
         env_file = ".env"

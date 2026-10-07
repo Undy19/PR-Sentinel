@@ -27,7 +27,7 @@ How the pipeline flows from a GitHub event to the Telegram chat:
 ```mermaid
 graph TD
     A["GitHub webhook<br/>(pull_request event)"] -->|POST| B["FastAPI server<br/>(HMAC, replay protection)"]
-    B -->|Immediately returns 200 OK| A
+    B -->|Immediately returns 202 Accepted| A
     B -->|Queue: up to 100 tasks| C["Background async pipeline"]
 
     C --> D["Risk analyzer<br/>(OpenAI API + backoff on 429)"]
@@ -76,6 +76,8 @@ Index the git history into the SQLite expertise graph used for reviewer recommen
 | `DATABASE_PATH` | no | Default `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
 | `REPO_PATH` | no | Local checkout of `GITHUB_REPO` used to build the expertise graph (bot and standalone webhook). Default `.` |
+| `LATENCY_BUDGET_SECONDS` | no | Notification latency budget (webhook receipt → Telegram send); exceeding it logs a warning. Default `10` |
+| `GRAPH_REFRESH_INTERVAL_SECONDS` | no | Periodic expertise graph rebuild interval; `0` disables. Default `3600` |
 
 Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 
@@ -118,6 +120,18 @@ ngrok http 8000
 ```
 
 (or localtunnel), then set `<tunnel-url>/webhook/github` as the webhook URL in GitHub repo settings (Settings → Webhooks → Add webhook; content type `application/json`; events: `pull_request`; secret = your `GITHUB_WEBHOOK_SECRET`). For production, deploy the server on a host with a public domain + SSL and point the webhook URL there, keeping the secret in sync.
+
+## Deployment (Docker)
+
+```bash
+cp .env.example .env   # then edit secrets, chmod 600 .env
+docker compose up -d
+```
+
+The container runs the bot and the webhook server together, persists the SQLite
+database in `./data`, and health-checks `GET /health`. Full production guide —
+TLS reverse proxy, GitHub webhook setup, backups, graph refresh, upgrade and
+rollback: [`docs/deployment.md`](docs/deployment.md).
 
 ## Example notification
 

@@ -58,12 +58,15 @@ dev = [
     "mypy>=1.8,<2",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: tests that exercise real git repositories / cross-module flows",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 100
