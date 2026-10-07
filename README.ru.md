@@ -76,6 +76,7 @@ python -m pr_sentinel.cli index-repo
 | `TELEGRAM_CHAT_ID` | да | ID целевого чата/канала |
 | `DATABASE_PATH` | нет | По умолчанию `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | нет | `ru` (по умолчанию) или `en` |
+| `REPO_PATH` | нет | Локальный чекаут `GITHUB_REPO`, из которого строится граф компетенций (бот и standalone webhook). По умолчанию `.` |
 
 Полный справочник: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 
