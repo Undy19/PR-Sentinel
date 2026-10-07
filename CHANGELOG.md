@@ -29,7 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   logins via `GET /search/users?q="<email>" in:email` and cached in a new
   `login_map` table; failed lookups fall back to the local part. The
   `commits` table gains an `author_email` column (auto-migrated in place).
-
 ### Fixed
 
 - Webhook standalone mode (`uvicorn pr_sentinel.webhook.server:app`) now builds
