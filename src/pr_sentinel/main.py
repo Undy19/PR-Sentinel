@@ -57,14 +57,13 @@ async def main() -> None:
     await db.connect()
 
     graph = await ExpertiseGraph.create(settings.database_path)
-    repo_path = os.environ.get("REPO_PATH", ".")
     try:
-        await graph.build_from_repo(repo_path)
-        logger.info("expertise graph built from %s", repo_path)
+        await graph.build_from_repo(settings.repo_path)
+        logger.info("expertise graph built from %s", settings.repo_path)
     except Exception:
         logger.exception(
             "failed to build expertise graph from %s; continuing without reviewer recommendations",
-            repo_path,
+            settings.repo_path,
         )
 
     bot = PRBot(settings.telegram_bot_token)

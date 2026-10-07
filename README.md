@@ -75,6 +75,7 @@ Index the git history into the SQLite expertise graph used for reviewer recommen
 | `TELEGRAM_CHAT_ID` | yes | Target chat/channel ID |
 | `DATABASE_PATH` | no | Default `pr_sentinel.db` |
 | `NOTIFICATION_LANGUAGE` | no | `ru` (default) or `en` |
+| `REPO_PATH` | no | Local checkout of `GITHUB_REPO` used to build the expertise graph (bot and standalone webhook). Default `.` |
 
 Full reference: [`docs/architecture.md`](docs/architecture.md) § Configuration.
 

@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Webhook standalone mode (`uvicorn pr_sentinel.webhook.server:app`) now builds
+  the expertise graph from `REPO_PATH`; previously it started with an empty
+  graph, so every notification silently recommended no reviewers. `REPO_PATH`
+  is now a `Settings` field (`repo_path`, default `.`) shared by both entry
+  points, and a failing graph build is logged without stopping the server.
+
 ## [0.1.0] - 2026-10-05
 
 ### Added

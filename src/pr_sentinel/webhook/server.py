@@ -156,11 +156,21 @@ async def build_default_deps(settings: Settings) -> WebhookDeps:
     """Construct the full service bundle from settings.
 
     Used when the app runs standalone (``uvicorn pr_sentinel.webhook.server:app``)
-    and no pre-built deps were injected.
+    and no pre-built deps were injected. The expertise graph is rebuilt from
+    ``settings.repo_path``; a failure there is logged and leaves the graph
+    empty, so the webhook server still starts.
     """
     db = Database(settings.database_path)
     await db.connect()
     graph = await ExpertiseGraph.create(settings.database_path)
+    try:
+        await graph.build_from_repo(settings.repo_path)
+        logger.info("expertise graph built from %s", settings.repo_path)
+    except Exception:
+        logger.exception(
+            "failed to build expertise graph from %s; continuing without reviewer recommendations",
+            settings.repo_path,
+        )
     return WebhookDeps(
         settings=settings,
         bot=PRBot(settings.telegram_bot_token),

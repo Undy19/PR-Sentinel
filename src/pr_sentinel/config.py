@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     openai_base_url: str | None = None
     openai_model: str = "gpt-4o"
     database_path: str = "pr_sentinel.db"
+    repo_path: str = "."  # local checkout of the tracked repo; builds the expertise graph
     github_repo: str  # "owner/repo" format
     telegram_chat_id: int
     notification_language: str = "ru"  # "ru" or "en"

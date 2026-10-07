@@ -6,6 +6,9 @@ import asyncio
 import hashlib
 import hmac
 import json
+import logging
+import os
+import subprocess
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -24,7 +27,9 @@ from pr_sentinel.webhook.server import (
     MAX_BODY_BYTES,
     WebhookDeps,
     WorkItem,
+    _close_bundle,
     _queue_worker,
+    build_default_deps,
     create_app,
 )
 
@@ -255,3 +260,101 @@ async def test_webhook_duplicate_delivery(webhook_env: Env) -> None:
     deps.bot.send_notification.assert_awaited_once()
     history = await deps.db.get_pr_history()
     assert len(history) == 1
+
+
+_ALICE = {
+    "GIT_AUTHOR_NAME": "Alice",
+    "GIT_AUTHOR_EMAIL": "alice@example.com",
+    "GIT_COMMITTER_NAME": "Alice",
+    "GIT_COMMITTER_EMAIL": "alice@example.com",
+}
+_BOB = {
+    "GIT_AUTHOR_NAME": "Bob",
+    "GIT_AUTHOR_EMAIL": "bob@example.com",
+    "GIT_COMMITTER_NAME": "Bob",
+    "GIT_COMMITTER_EMAIL": "bob@example.com",
+}
+
+
+def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> None:
+    full_env = os.environ | (env or {})
+    subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        env=full_env,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _dated(author: dict[str, str], date: str) -> dict[str, str]:
+    return {
+        **author,
+        "GIT_AUTHOR_DATE": date,
+        "GIT_COMMITTER_DATE": date,
+    }
+
+
+def _make_repo(repo: Path) -> None:
+    """Create a temp repo: alice commits a.py 2x (recent), bob commits b.py 1x (old)."""
+    _git(repo, "init", "-q")
+
+    for version, date in (
+        ("a1\n", "2026-08-01T10:00:00+00:00"),
+        ("a2\n", "2026-08-02T10:00:00+00:00"),
+    ):
+        (repo / "a.py").write_text(version)
+        _git(repo, "add", "a.py", env=_dated(_ALICE, date))
+        _git(repo, "commit", "-q", "-m", f"alice: {version.strip()}", env=_dated(_ALICE, date))
+
+    (repo / "b.py").write_text("b1\n")
+    _git(repo, "add", "b.py", env=_dated(_BOB, "2026-01-01T10:00:00+00:00"))
+    _git(repo, "commit", "-q", "-m", "bob: b1", env=_dated(_BOB, "2026-01-01T10:00:00+00:00"))
+
+
+def _make_settings(tmp_path: Path, **overrides: str) -> Settings:
+    """A valid settings object for the standalone bundle; ``overrides`` replace keys."""
+    values: dict[str, object] = {
+        "telegram_bot_token": "123:TEST",
+        "github_token": GITHUB_TOKEN,
+        "github_webhook_secret": WEBHOOK_SECRET,
+        "openai_api_key": "test-openai-key",
+        "github_repo": "owner/repo",
+        "telegram_chat_id": CHAT_ID,
+        "database_path": str(tmp_path / "pr_sentinel.db"),
+        "replay_protection_enabled": True,
+    }
+    values.update(overrides)
+    return Settings.model_validate(values)
+
+
+async def test_build_default_deps_builds_graph_from_repo_path(tmp_path: Path) -> None:
+    """Standalone mode builds the expertise graph from ``REPO_PATH`` (regression)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _make_repo(repo)
+
+    deps = await build_default_deps(_make_settings(tmp_path, repo_path=str(repo)))
+    try:
+        reviewers = await deps.graph.recommend_reviewers(["a.py", "b.py"])
+        assert [reviewer.login for reviewer in reviewers] == ["alice", "bob"]
+    finally:
+        await _close_bundle(deps)
+
+
+async def test_build_default_deps_non_git_repo_path(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A non-git ``REPO_PATH`` is logged, never raised: the server still starts."""
+    plain = tmp_path / "plain"
+    plain.mkdir()
+
+    with caplog.at_level(logging.ERROR, logger="pr_sentinel.webhook.server"):
+        deps = await build_default_deps(_make_settings(tmp_path, repo_path=str(plain)))
+
+    try:
+        assert await deps.graph.recommend_reviewers(["a.py"]) == []
+    finally:
+        await _close_bundle(deps)
+
+    assert any("failed to build expertise graph" in record.message for record in caplog.records)
